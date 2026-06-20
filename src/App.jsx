@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   GROUPS,
   BRACKET,
@@ -7,6 +7,7 @@ import {
   predictBracket,
   LIVE_ELIMINATED,
 } from './data';
+import { fetchLive, POLL_MS } from './liveData';
 import GroupCard from './components/GroupCard';
 import Slot from './components/Slot';
 import emblem from './assets/2026_FIFA_World_Cup_emblem.svg.webp';
@@ -21,8 +22,8 @@ const BOTTOM_GROUPS = GROUPS.slice(6); // G–L
 const ROUND_NAMES = ['ROUND OF 32', 'ROUND OF 16', 'QUARTER-FINALS', 'SEMI-FINALS'];
 
 export default function App() {
-  // slotId -> teamId. Seeded with the live FIFA snapshot (teams that have
-  // actually qualified so far); drag in the rest as they qualify.
+  // slotId -> teamId. Seeded with the static snapshot for an instant first
+  // paint, then replaced by the live API result once it arrives.
   const [assignments, setAssignments] = useState(getInitialAssignments);
 
   // Tap-to-place (touch screens): the currently "picked up" teamId, or null.
@@ -31,10 +32,40 @@ export default function App() {
   // Teams knocked out by a prediction (didn't make the predicted bracket).
   const [predictedOut, setPredictedOut] = useState(() => new Set());
 
+  // Really-eliminated teams from the live feed (static set as the initial value).
+  const [liveEliminated, setLiveEliminated] = useState(() => new Set(LIVE_ELIMINATED));
+
+  // Latest live snapshot, so "Reset to live" reflects the most recent fetch.
+  const liveSnapshot = useRef({
+    assignments: getInitialAssignments(),
+    eliminated: new Set(LIVE_ELIMINATED),
+  });
+  // Has the user edited the board? Once true, polling stops auto-applying so we
+  // don't stomp their drags/prediction (they can still hit "Reset to live").
+  const userEdited = useRef(false);
+
+  // Fetch the live snapshot on load, then poll.
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      const snap = await fetchLive();
+      if (cancelled) return;
+      liveSnapshot.current = snap;
+      setLiveEliminated(snap.eliminated);
+      if (!userEdited.current) setAssignments(snap.assignments);
+    };
+    refresh();
+    const timer = setInterval(refresh, POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
   const usedTeamIds = new Set(Object.values(assignments));
 
   // Shown as "OUT": really eliminated teams + teams a prediction left out.
-  const eliminatedIds = new Set([...LIVE_ELIMINATED, ...predictedOut]);
+  const eliminatedIds = new Set([...liveEliminated, ...predictedOut]);
 
   // Tap a flag in a group to pick it up / put it back down.
   const handleSelectTeam = (teamId) =>
@@ -43,6 +74,7 @@ export default function App() {
   // Tap a slot: place the picked-up team, or pick up the team already there.
   const handleSlotTap = (slotId) => {
     if (selected) {
+      userEdited.current = true;
       setAssignments((prev) => ({ ...prev, [slotId]: selected }));
       setSelected(null);
     } else if (assignments[slotId]) {
@@ -67,8 +99,8 @@ export default function App() {
   const handleDrop = (e, slotId) => {
     const teamId = e.dataTransfer.getData('teamId');
     if (!teamId) return;
-    const fromSlot = e.dataTransfer.getData('fromSlot');
 
+    userEdited.current = true;
     setAssignments((prev) => ({
       // Dropping a flag fills the target slot and leaves the source intact —
       // advancing a team to the next round shouldn't empty its current round.
@@ -79,6 +111,7 @@ export default function App() {
   };
 
   const handleClear = (slotId) => {
+    userEdited.current = true;
     setAssignments((prev) => {
       const next = { ...prev };
       delete next[slotId];
@@ -87,16 +120,20 @@ export default function App() {
   };
 
   const handleClearAll = () => {
+    userEdited.current = true;
     setAssignments({});
     setPredictedOut(new Set());
     setSelected(null);
   };
   const handleResetLive = () => {
-    setAssignments(getInitialAssignments());
+    userEdited.current = false;
+    setAssignments({ ...liveSnapshot.current.assignments });
+    setLiveEliminated(liveSnapshot.current.eliminated);
     setPredictedOut(new Set());
     setSelected(null);
   };
   const handlePredict = () => {
+    userEdited.current = true;
     const result = predictBracket();
     const placed = new Set(Object.values(result));
     // Teams that never appear in the predicted bracket are eliminated.
