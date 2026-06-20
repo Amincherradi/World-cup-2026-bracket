@@ -378,7 +378,7 @@ $danger: #bf3337; // tomato-jam — live / eliminated
     content: '';
     position: absolute;
     top: 50%;
-    width: 16px;
+    width: 8px;
     height: 2px;
     background: $line;
     transform: translateY(-50%);
@@ -550,17 +550,50 @@ $danger: #bf3337; // tomato-jam — live / eliminated
   user-select: none;
 }
 
-// Zeta logo in the empty space below the champion.
-.zeta-logo {
+// Zeta logo + credits in the empty space below the champion.
+.center-footer {
   position: absolute;
-  bottom: -4%;
+  bottom: 7%;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.zeta-logo {
   width: 220px;
-  max-width: none;
   height: auto;
   pointer-events: none;
   user-select: none;
+}
+
+.credits {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: -75px; // pull links up close under the logo (PNG has transparent base)
+}
+
+.credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: $text;
+  text-decoration: none;
+  transition: color 0.12s;
+
+  svg {
+    width: 15px;
+    height: 15px;
+    fill: currentColor;
+  }
+}
+
+a.credit:hover {
+  color: $accent;
 }
 
 // The two finalists sit side by side at the exact vertical centre (50%), so
