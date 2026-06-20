@@ -162,7 +162,7 @@ function clinchedTop2(teams, played, remaining) {
 
 const strengthOf = (name) => STRENGTH[resolveId(name)] ?? 0;
 
-// Project each group's FINAL standings from the results already played plus a
+//  Project each group's FINAL standings from the results already played plus a
 // strength-based forecast of the remaining matches. Returns
 // { A: [winnerId, runnerUpId, thirdId, fourthId], ... } — used to seed Predict
 // so its bracket reflects games that have actually been played.
