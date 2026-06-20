@@ -664,6 +664,7 @@ a.credit:hover {
     width: 100%;
     flex-direction: row;
     flex-wrap: wrap;
+    justify-content: flex-start; // override the desktop space-between
 
     .group-card {
       flex: 1 1 150px;
@@ -677,5 +678,15 @@ a.credit:hover {
     .bracket-body {
       min-width: 900px; // keep the bracket readable; scroll if narrower
     }
+  }
+}
+
+// Short viewports: the fixed full-height layout would clip the bottom group
+// cards (F / L). Let the page scroll instead so every group stays visible.
+@media (min-width: 1025px) and (max-height: 820px) {
+  .app {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
 }
