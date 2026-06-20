@@ -106,7 +106,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>World Cup 2026 — Bracket</h1>
+        <h1>World Cup 2026</h1>
         <div className="banner">
           <h2>BRACKET</h2>
           <span className="banner-live">
@@ -115,6 +115,9 @@ export default function App() {
           </span>
         </div>
         <div className="actions">
+          <span className="predict-note">
+            <strong>Predict</strong> uses worldwide community current probabilities — not my own picks.
+          </span>
           <button type="button" className="reset-btn predict" onClick={handlePredict}>
             Predict
           </button>

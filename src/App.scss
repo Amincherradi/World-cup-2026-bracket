@@ -34,12 +34,53 @@ $danger: #bf3337; // tomato-jam — live / eliminated
     font-weight: 700;
     letter-spacing: 0.02em;
     margin: 0;
-    flex: 1; // left third
   }
 
   .actions {
     flex: 1; // right third
     justify-content: flex-end;
+  }
+}
+
+// Callout pointing at the Predict button, gently nudging left–right to draw the eye.
+.predict-note {
+  position: relative;
+  max-width: 230px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: #fff;
+  background: $accent;
+  border-radius: 8px;
+  padding: 7px 10px;
+  box-shadow: 0 4px 12px rgba($accent, 0.35);
+  animation: nudge-x 1.3s ease-in-out infinite;
+
+  strong {
+    font-weight: 800;
+  }
+
+  // arrow pointing right, toward the Predict button
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -7px;
+    width: 0;
+    height: 0;
+    transform: translateY(-50%);
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-left: 8px solid $accent;
+  }
+}
+
+@keyframes nudge-x {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-6px);
   }
 }
 
@@ -212,20 +253,20 @@ $danger: #bf3337; // tomato-jam — live / eliminated
   0%,
   100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba($danger, 0.6);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
     opacity: 1;
   }
   50% {
     transform: scale(1.25);
-    box-shadow: 0 0 0 5px rgba($danger, 0);
-    opacity: 0.7;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0);
+    opacity: 0.75;
   }
 }
 
 // ---- Banner ----
 .banner {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
   gap: 10px;
   margin: 0;
@@ -241,16 +282,20 @@ $danger: #bf3337; // tomato-jam — live / eliminated
     align-items: center;
     gap: 5px;
     font-size: 11px;
-    font-weight: 700;
-    color: $danger;
+    font-weight: 800;
+    color: #fff;
     letter-spacing: 0.1em;
+    background: $danger;
+    border-radius: 999px;
+    padding: 3px 9px 3px 7px;
+    box-shadow: 0 2px 6px rgba($danger, 0.4);
   }
 
   .live-dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: $danger;
+    background: #fff;
     animation: live-pulse 1.4s ease-in-out infinite;
   }
 }
