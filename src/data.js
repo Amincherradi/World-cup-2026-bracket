@@ -118,10 +118,10 @@ export const TEAMS_BY_ID = Object.fromEntries(
 );
 
 // ----- Bracket structure -----
-// Round of 32 position labels, taken from the reference image.
-// Left half (top→bottom) then right half (top→bottom). Each entry is one slot.
-// These are placeholders for the visual layout; exact seeding rules (Section 4)
-// can be wired in later.
+// Round of 32 position labels, matching FIFA's official 2026 knockout bracket.
+// Left half (top→bottom) then right half (top→bottom). Each entry is one slot;
+// adjacent slots play each other. The "3 ..." labels list the groups a third-
+// placed opponent may come from (depends on which 8 thirds qualify).
 const R32_LEFT = [
   '1E', '3 ABCDF',
   '1I', '3 CDFGH',
@@ -129,15 +129,15 @@ const R32_LEFT = [
   '1F', '2C',
   '2K', '2L',
   '1H', '2J',
-  '3 BEFGH', '1G',
-  '3 AEHIJ', '1A',
+  '3 AEHIJ', '1G',
+  '3 CEFHI', '1A',
 ];
 
 const R32_RIGHT = [
   '1C', '2F',
   '2E', '2I',
-  '1L', '3 CEFHI',
-  '1D', '3 EHIJK',
+  '1L', '3 EHIJK',
+  '1D', '3 BEFIJ',
   '1J', '2H',
   '2D', '2G',
   '1B', '3 EFGIJ',
