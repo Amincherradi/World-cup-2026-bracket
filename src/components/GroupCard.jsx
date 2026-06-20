@@ -6,6 +6,8 @@ export default function GroupCard({
   onDragStart,
   usedTeamIds,
   eliminatedIds,
+  selectedTeamId,
+  onSelectTeam,
 }) {
   return (
     <div className="group-card">
@@ -15,15 +17,18 @@ export default function GroupCard({
           const eliminated = eliminatedIds?.has(team.id);
           const used = usedTeamIds.has(team.id);
           const disabled = eliminated || used;
+          const isSelected = selectedTeamId === team.id;
           return (
             <div
               key={team.id}
               className={
                 'group-flag' +
-                (eliminated ? ' is-eliminated' : used ? ' is-used' : '')
+                (eliminated ? ' is-eliminated' : used ? ' is-used' : '') +
+                (isSelected ? ' is-selected' : '')
               }
               draggable={!disabled}
               onDragStart={(e) => !disabled && onDragStart(e, team.id)}
+              onClick={() => !disabled && onSelectTeam?.(team.id)}
               title={eliminated ? `${team.name} — eliminated` : team.name}
             >
               <Flag code={team.code} title={team.name} />

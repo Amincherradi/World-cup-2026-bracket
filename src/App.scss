@@ -191,6 +191,13 @@ $danger: #bf3337; // tomato-jam — live / eliminated
     pointer-events: none;
   }
 
+  // Tap-to-place: the picked-up flag.
+  &.is-selected {
+    border-color: $accent;
+    box-shadow: 0 0 0 2px rgba($accent, 0.5);
+    transform: translateY(-1px);
+  }
+
   // Real eliminated team: greyed out, struck through, "OUT" badge.
   &.is-eliminated {
     cursor: not-allowed;
@@ -491,6 +498,8 @@ $danger: #bf3337; // tomato-jam — live / eliminated
   justify-content: center;
   transition: border-color 0.12s, background 0.12s;
 
+  cursor: pointer; // tap-to-place
+
   &.is-filled {
     background: $slot;
     cursor: grab;
@@ -498,6 +507,10 @@ $danger: #bf3337; // tomato-jam — live / eliminated
   &.drag-over {
     border-color: $accent;
     background: rgba($accent, 0.14);
+  }
+  &.is-selected {
+    border-color: $accent;
+    box-shadow: 0 0 0 2px rgba($accent, 0.5);
   }
 }
 
@@ -688,5 +701,42 @@ a.credit:hover {
     height: auto;
     min-height: 100vh;
     overflow: visible;
+  }
+}
+
+// Tap-to-place hint toast (mainly for touch screens).
+.tap-hint {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: $accent;
+  color: #fff;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba($accent, 0.4);
+
+  strong {
+    font-weight: 800;
+  }
+
+  button {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.32);
+    }
   }
 }

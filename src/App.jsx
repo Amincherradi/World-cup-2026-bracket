@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   GROUPS,
   BRACKET,
+  TEAMS_BY_ID,
   getInitialAssignments,
   predictBracket,
   LIVE_ELIMINATED,
@@ -24,7 +25,24 @@ export default function App() {
   // actually qualified so far); drag in the rest as they qualify.
   const [assignments, setAssignments] = useState(getInitialAssignments);
 
+  // Tap-to-place (touch screens): the currently "picked up" teamId, or null.
+  const [selected, setSelected] = useState(null);
+
   const usedTeamIds = new Set(Object.values(assignments));
+
+  // Tap a flag in a group to pick it up / put it back down.
+  const handleSelectTeam = (teamId) =>
+    setSelected((prev) => (prev === teamId ? null : teamId));
+
+  // Tap a slot: place the picked-up team, or pick up the team already there.
+  const handleSlotTap = (slotId) => {
+    if (selected) {
+      setAssignments((prev) => ({ ...prev, [slotId]: selected }));
+      setSelected(null);
+    } else if (assignments[slotId]) {
+      setSelected(assignments[slotId]);
+    }
+  };
 
   // Drag from a group flag: just carry the teamId.
   const handleGroupDragStart = (e, teamId) => {
@@ -62,14 +80,25 @@ export default function App() {
     });
   };
 
-  const handleClearAll = () => setAssignments({});
-  const handleResetLive = () => setAssignments(getInitialAssignments());
-  const handlePredict = () => setAssignments(predictBracket());
+  const handleClearAll = () => {
+    setAssignments({});
+    setSelected(null);
+  };
+  const handleResetLive = () => {
+    setAssignments(getInitialAssignments());
+    setSelected(null);
+  };
+  const handlePredict = () => {
+    setAssignments(predictBracket());
+    setSelected(null);
+  };
 
   const slotProps = {
     onDrop: handleDrop,
     onDragStart: handleSlotDragStart,
     onClear: handleClear,
+    onTap: handleSlotTap,
+    selected,
   };
 
   // Round-name header row for one half (mirrors the body's flex columns).
@@ -140,6 +169,8 @@ export default function App() {
             group={g}
             usedTeamIds={usedTeamIds}
             eliminatedIds={LIVE_ELIMINATED}
+            selectedTeamId={selected}
+            onSelectTeam={handleSelectTeam}
             onDragStart={handleGroupDragStart}
           />
         ))}
@@ -227,11 +258,23 @@ export default function App() {
             group={g}
             usedTeamIds={usedTeamIds}
             eliminatedIds={LIVE_ELIMINATED}
+            selectedTeamId={selected}
+            onSelectTeam={handleSelectTeam}
             onDragStart={handleGroupDragStart}
           />
         ))}
       </div>
       </div>
+
+      {selected && (
+        <div className="tap-hint" role="status">
+          Selected <strong>{TEAMS_BY_ID[selected]?.name}</strong> — tap a slot to place it.
+          <button type="button" onClick={() => setSelected(null)}>
+            Cancel
+          </button>
+        </div>
+      )}
+
       <Analytics />
     </div>
   );
