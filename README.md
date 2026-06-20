@@ -1,16 +1,23 @@
-# React + Vite
+# World Cup 2026 — Bracket 🏆
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive, frontend-only **drag-and-drop bracket** for the FIFA World Cup 2026.
+Drag national flags from the 12 groups into the knockout bracket, predict the whole
+tournament with one click, and follow the live state of the competition.
 
-Currently, two official plugins are available:
+Built with **React + Vite** and **SCSS** — runs entirely in the browser.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- **12 groups (A–L)** with crisp SVG flags, flanking the bracket.
+- **Drag & drop** flags into any slot, from the Round of 32 all the way to the Champion.
+- **Predict** — fills the entire bracket in one click based on team strength ratings.
+- **Live** — shows the teams that have qualified, and marks eliminated teams as "OUT".
+- **Responsive** dark-on-light design.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Getting started
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm install
+npm run dev      # http://localhost:4200
+npm run build    # production build
+```
