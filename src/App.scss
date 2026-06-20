@@ -318,6 +318,15 @@ $danger: #bf3337; // tomato-jam — live / eliminated
   min-height: 0; // flex to fit available height instead of forcing scroll
 }
 
+// Holds the head + body. On phones this keeps a fixed design width and is
+// zoomed down to fit (see the mobile block); on desktop it just flex-fills.
+.bracket-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 // Round-name header row — mirrors the body's column structure so names align.
 .bracket-head,
 .bracket-body {
@@ -563,29 +572,39 @@ $danger: #bf3337; // tomato-jam — live / eliminated
   user-select: none;
 }
 
-// Zeta logo + credits in the empty space below the champion.
-.center-footer {
-  position: absolute;
-  bottom: 7%;
-  left: 50%;
-  transform: translateX(-50%);
+// Zeta logo fused in as a background, with the credits overlaid on its lower
+// portion. A `contain` background always scales within the box and never
+// overflows, so it can't break other elements as the screen resizes.
+.zeta-box {
+  aspect-ratio: 1 / 1; // zeta.png is square (1024×1024)
+  background: url('./assets/zeta.png') no-repeat center / contain;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 16%; // sit the links over the lower part of the logo art
+  user-select: none;
 }
 
-.zeta-logo {
+// Desktop: the Zeta box lives in the empty space below the champion.
+.center-footer {
+  position: absolute;
+  bottom: 4%;
+  left: 50%;
+  transform: translateX(-50%);
   width: 220px;
-  height: auto;
-  pointer-events: none;
-  user-select: none;
+  max-width: 90%;
+}
+
+// Mobile-only footer (declutters the cramped center column on phones).
+.page-footer {
+  display: none;
 }
 
 .credits {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-top: -75px; // pull links up close under the logo (PNG has transparent base)
+  white-space: nowrap; // never clip the @handle on narrow screens
 }
 
 .credit {
@@ -633,6 +652,7 @@ a.credit:hover {
   top: 64%;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 2; // stay above the Zeta footer if they overlap on short screens
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -659,6 +679,12 @@ a.credit:hover {
   }
   .title-block h2 {
     font-size: 22px;
+  }
+  // Shrink the Zeta logo on the tablet range so it stays clear of the champion.
+  .center-footer {
+    width: 110px;
+    bottom: 0;
+    padding-bottom: 10%;
   }
 }
 
@@ -701,6 +727,97 @@ a.credit:hover {
     height: auto;
     min-height: 100vh;
     overflow: visible;
+  }
+}
+
+// ---- Phones: stack the header, tidy the groups, scroll the bracket ----
+@media (max-width: 680px) {
+  .app {
+    padding: 12px 10px;
+  }
+
+  // Header: stack title / banner / actions into centered rows.
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .topbar h1 {
+    font-size: 16px;
+    text-align: center;
+  }
+  .banner h2 {
+    font-size: 22px;
+  }
+
+  // The animated "Predict uses community probabilities" callout is a desktop
+  // affordance — it crowds the buttons on a phone, so drop it.
+  .predict-note {
+    display: none;
+  }
+
+  .actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+  .reset-btn {
+    flex: 1 1 auto;
+    padding: 9px 12px;
+    font-size: 13px;
+  }
+
+  // Groups: two tidy columns above and below the bracket.
+  .groups-side {
+    gap: 8px;
+    .group-card {
+      flex: 1 1 calc(50% - 4px);
+    }
+  }
+
+  // Bracket: scale-to-fit instead of side-scroll. The inner is laid out at its
+  // full 720px design width, then zoomed down (factor set in JS) to fill the
+  // available width edge-to-edge with no horizontal scroll.
+  .layout .bracket {
+    // Scaled to fit, so normally no scroll appears — but keep horizontal scroll
+    // as a safety net so a few px of overflow can never trap the view.
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 10px;
+  }
+  .bracket-inner {
+    flex: none;
+    width: 720px; // design width; --bracket-zoom shrinks it to fit
+    zoom: var(--bracket-zoom, 1);
+  }
+  // Drop the tablet scroll min-width so the columns size to the 720px inner.
+  .bracket-head,
+  .bracket-body {
+    min-width: 0;
+  }
+
+  // Declutter the cramped center column: drop the big trophy emblem and the
+  // Zeta logo (they overlapped the semi-final boxes when scrolling). Keep just
+  // the functional SF1–VS–SF2 and CHAMPION slots. The Zeta logo + credits move
+  // to the page footer below, where there's room.
+  .center {
+    min-width: 120px;
+  }
+  .center .emblem,
+  .center .center-footer {
+    display: none;
+  }
+
+  .page-footer {
+    display: flex;
+    justify-content: center;
+    padding: 18px 0 6px;
+  }
+  .page-footer .zeta-box {
+    width: 150px;
   }
 }
 
