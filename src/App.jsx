@@ -28,7 +28,13 @@ export default function App() {
   // Tap-to-place (touch screens): the currently "picked up" teamId, or null.
   const [selected, setSelected] = useState(null);
 
+  // Teams knocked out by a prediction (didn't make the predicted bracket).
+  const [predictedOut, setPredictedOut] = useState(() => new Set());
+
   const usedTeamIds = new Set(Object.values(assignments));
+
+  // Shown as "OUT": really eliminated teams + teams a prediction left out.
+  const eliminatedIds = new Set([...LIVE_ELIMINATED, ...predictedOut]);
 
   // Tap a flag in a group to pick it up / put it back down.
   const handleSelectTeam = (teamId) =>
@@ -82,14 +88,22 @@ export default function App() {
 
   const handleClearAll = () => {
     setAssignments({});
+    setPredictedOut(new Set());
     setSelected(null);
   };
   const handleResetLive = () => {
     setAssignments(getInitialAssignments());
+    setPredictedOut(new Set());
     setSelected(null);
   };
   const handlePredict = () => {
-    setAssignments(predictBracket());
+    const result = predictBracket();
+    const placed = new Set(Object.values(result));
+    // Teams that never appear in the predicted bracket are eliminated.
+    setPredictedOut(
+      new Set(Object.keys(TEAMS_BY_ID).filter((id) => !placed.has(id)))
+    );
+    setAssignments(result);
     setSelected(null);
   };
 
@@ -168,7 +182,7 @@ export default function App() {
             key={g.id}
             group={g}
             usedTeamIds={usedTeamIds}
-            eliminatedIds={LIVE_ELIMINATED}
+            eliminatedIds={eliminatedIds}
             selectedTeamId={selected}
             onSelectTeam={handleSelectTeam}
             onDragStart={handleGroupDragStart}
@@ -257,7 +271,7 @@ export default function App() {
             key={g.id}
             group={g}
             usedTeamIds={usedTeamIds}
-            eliminatedIds={LIVE_ELIMINATED}
+            eliminatedIds={eliminatedIds}
             selectedTeamId={selected}
             onSelectTeam={handleSelectTeam}
             onDragStart={handleGroupDragStart}
