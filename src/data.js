@@ -201,7 +201,7 @@ export const LIVE_ELIMINATED = new Set([
 const GROUPS_BY_ID = Object.fromEntries(GROUPS.map((g) => [g.id, g]));
 
 // ----- Team strength ratings (0–100), proxy for community win probability -----
-const STRENGTH = {
+export const STRENGTH = {
   mex: 76, kor: 71, cze: 72, rsa: 64,
   can: 70, sui: 80, bih: 72, qat: 63,
   bra: 93, mar: 82, sco: 69, hai: 54,
@@ -226,8 +226,16 @@ const winner = (a, b) => {
   return eff(a) >= eff(b) ? a : b;
 };
 
-// Fill the entire bracket based on team ratings.
-export function predictBracket() {
+// Resolve a group position to a team id. `groupOrder` (from the live feed) is a
+// projection of each group's final standings — e.g. { A: ['mex','kor','cze',…] }
+// derived from results already played plus a strength-based forecast of the rest.
+// Without it we fall back to the static listing order in GROUPS.
+const positionId = (groupOrder, letter, rank /* 0-based */) =>
+  groupOrder?.[letter]?.[rank] ?? GROUPS_BY_ID[letter].teams[rank]?.id;
+
+// Fill the entire bracket. Seeds the Round of 32 from the projected group
+// standings (so it reflects results already played), then advances by rating.
+export function predictBracket(groupOrder) {
   const a = {};
 
   // 1) Seed the Round of 32.
@@ -237,26 +245,41 @@ export function predictBracket() {
     const label = slot.label.trim();
     const m = /^([12])([A-L])$/.exec(label);
     if (m) {
-      // "1E" -> group winner (1st listed), "2A" -> runner-up (2nd listed)
-      a[slot.id] = GROUPS_BY_ID[m[2]].teams[Number(m[1]) - 1].id;
+      // "1E" -> projected winner, "2A" -> projected runner-up
+      a[slot.id] = positionId(groupOrder, m[2], Number(m[1]) - 1);
     } else {
       // "3 ABCDF" -> a best third-placed team from one of those groups
       const letters = label.replace(/[^A-L]/g, '').split('');
       thirdSlots.push({ slotId: slot.id, letters });
     }
   }
-  // For each best-third slot, take the strongest available 3rd-placed team
-  // (3rd listed) from its allowed groups.
-  for (const ts of thirdSlots) {
-    let best = null;
-    for (const L of ts.letters) {
-      const t = GROUPS_BY_ID[L].teams[2];
-      if (usedThird.has(t.id)) continue;
-      if (!best || eff(t.id) > eff(best.id)) best = t;
+  // Best-third slots: take the 8 strongest projected third-placed teams across
+  // all groups, then assign them to the eligible "3 ..." slots most-constrained
+  // slot first. This guarantees every slot is filled (a naive per-slot pick can
+  // exhaust a slot's eligible groups and leave it empty, e.g. "3 EFGIJ").
+  const thirdPool = Object.keys(GROUPS_BY_ID)
+    .map((L) => ({ id: positionId(groupOrder, L, 2), letter: L }))
+    .filter((c) => c.id)
+    .sort((x, y) => eff(y.id) - eff(x.id))
+    .slice(0, 8);
+
+  const pending = thirdSlots.map((s) => ({ ...s }));
+  const eligibleCount = (slot) =>
+    thirdPool.filter((c) => !usedThird.has(c.id) && slot.letters.includes(c.letter)).length;
+  while (pending.length) {
+    pending.sort((x, y) => eligibleCount(x) - eligibleCount(y));
+    const slot = pending.shift();
+    // Strongest eligible-and-unused team; fall back to any unused so the slot
+    // never ends up empty.
+    let pick = null;
+    for (const c of thirdPool) {
+      if (usedThird.has(c.id)) continue;
+      if (slot.letters.includes(c.letter) && (!pick || eff(c.id) > eff(pick.id))) pick = c;
     }
-    if (best) {
-      a[ts.slotId] = best.id;
-      usedThird.add(best.id);
+    if (!pick) pick = thirdPool.find((c) => !usedThird.has(c.id)) ?? null;
+    if (pick) {
+      a[slot.slotId] = pick.id;
+      usedThird.add(pick.id);
     }
   }
 

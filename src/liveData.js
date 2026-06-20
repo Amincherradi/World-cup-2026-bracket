@@ -4,7 +4,7 @@
 // hand-entered snapshot in data.js when no API key is configured or a fetch
 // fails, so the app always renders something sensible.
 
-import { GROUPS, BRACKET, LIVE_QUALIFIED, LIVE_ELIMINATED } from './data';
+import { GROUPS, BRACKET, LIVE_QUALIFIED, LIVE_ELIMINATED, STRENGTH } from './data';
 
 const API_KEY = import.meta.env.VITE_API_FOOTBALL_KEY;
 const BASE = 'https://v3.football.api-sports.io';
@@ -160,6 +160,45 @@ function clinchedTop2(teams, played, remaining) {
   return new Set(teams.filter((t) => safe[t]));
 }
 
+const strengthOf = (name) => STRENGTH[resolveId(name)] ?? 0;
+
+// Project each group's FINAL standings from the results already played plus a
+// strength-based forecast of the remaining matches. Returns
+// { A: [winnerId, runnerUpId, thirdId, fourthId], ... } — used to seed Predict
+// so its bracket reflects games that have actually been played.
+function projectGroupOrder(groups) {
+  const order = {};
+  for (const [letter, g] of Object.entries(groups)) {
+    const teams = [...g.teams];
+    const stat = Object.fromEntries(teams.map((t) => [t, { pts: 0, gf: 0, ga: 0 }]));
+    // Real results.
+    for (const r of g.played) {
+      const a = stat[r.a];
+      const b = stat[r.b];
+      a.gf += r.ga; a.ga += r.gb;
+      b.gf += r.gb; b.ga += r.ga;
+      if (r.ga > r.gb) a.pts += 3;
+      else if (r.gb > r.ga) b.pts += 3;
+      else { a.pts++; b.pts++; }
+    }
+    // Forecast remaining matches: clearly-stronger team wins; near-equal = draw.
+    for (const m of g.remaining) {
+      const sa = strengthOf(m.a);
+      const sb = strengthOf(m.b);
+      if (Math.abs(sa - sb) <= 2) { stat[m.a].pts++; stat[m.b].pts++; }
+      else if (sa > sb) { stat[m.a].pts += 3; stat[m.a].gf++; stat[m.b].ga++; }
+      else { stat[m.b].pts += 3; stat[m.b].gf++; stat[m.a].ga++; }
+    }
+    order[letter] = teams
+      .map((t) => ({ id: resolveId(t), name: t, gd: stat[t].gf - stat[t].ga, ...stat[t] }))
+      .sort((x, y) =>
+        y.pts - x.pts || y.gd - x.gd || y.gf - x.gf || strengthOf(y.name) - strengthOf(x.name))
+      .map((r) => r.id)
+      .filter(Boolean);
+  }
+  return order;
+}
+
 // Assign best-third teams to the eligible "3 ..." slots. Greedy, most
 // constrained slot first — an approximation of FIFA's combination table that
 // always produces a valid (group-eligible) placement.
@@ -231,7 +270,7 @@ function buildSnapshot(fixtures) {
     for (const t of thirds.slice(8)) eliminated.add(t.id);
   }
 
-  return { assignments, eliminated };
+  return { assignments, eliminated, groupOrder: projectGroupOrder(groups) };
 }
 
 // Returns { assignments, eliminated } from the live feed, or the static
@@ -245,6 +284,7 @@ export async function fetchLive() {
     return buildSnapshot(fixtures);
   } catch (err) {
     console.warn('[liveData] live fetch failed, using static snapshot:', err);
+    // No groupOrder -> Predict falls back to the static group listing order.
     return { assignments: { ...LIVE_QUALIFIED }, eliminated: new Set(LIVE_ELIMINATED) };
   }
 }

@@ -174,9 +174,19 @@ export default function App() {
     setPredictedOut(new Set());
     setSelected(null);
   };
-  const handlePredict = () => {
+  const handlePredict = async () => {
     userEdited.current = true;
-    const result = predictBracket();
+    // Pull the freshest results so the prediction reflects games just played,
+    // then project from them. Falls back to the last snapshot if the fetch hangs.
+    let snap = liveSnapshot.current;
+    try {
+      snap = await fetchLive();
+      liveSnapshot.current = snap;
+      setLiveEliminated(snap.eliminated);
+    } catch {
+      /* keep the last snapshot */
+    }
+    const result = predictBracket(snap.groupOrder);
     const placed = new Set(Object.values(result));
     // Teams that never appear in the predicted bracket are eliminated.
     setPredictedOut(
