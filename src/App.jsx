@@ -10,6 +10,7 @@ import GroupCard from './components/GroupCard';
 import Slot from './components/Slot';
 import emblem from './assets/2026_FIFA_World_Cup_emblem.svg.webp';
 import zeta from './assets/zeta.png';
+import { Analytics } from '@vercel/analytics/react';
 import './App.scss';
 
 const TOP_GROUPS = GROUPS.slice(0, 6); // A–F
@@ -210,6 +211,7 @@ export default function App() {
         ))}
       </div>
       </div>
+      <Analytics />
     </div>
   );
 }
