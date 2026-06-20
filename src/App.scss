@@ -1,0 +1,603 @@
+// ---- Theme tokens (palette: pale-slate / platinum / bright-marine / chocolate-plum / tomato-jam) ----
+$bg: #d1ced5; // pale-slate — page background
+$panel: #ededed; // platinum — bracket & cards
+$panel-2: #ffffff; // buttons / secondary panels
+$slot: #ffffff; // filled slot / flag tile
+$slot-empty: #e3e1e6; // empty bracket slot
+$line: #b0abb5; // borders & connector lines
+$border: #cdcad1; // card/panel borders
+$accent: #3270b4; // bright-marine — VS, Predict, champion, highlights
+$text: #503432; // chocolate-plum — primary text
+$muted: #837a78; // secondary text
+$danger: #bf3337; // tomato-jam — live / eliminated
+
+.app {
+  width: 100%;
+  height: 100vh;
+  margin: 0 auto;
+  padding: 14px clamp(12px, 2.5vw, 32px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; // page fixed to viewport, no scroll
+}
+
+// ---- Top bar ----
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin: 0;
+    flex: 1; // left third
+  }
+
+  .actions {
+    flex: 1; // right third
+    justify-content: flex-end;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.reset-btn {
+  background: $panel-2;
+  color: $text;
+  border: 1px solid $line;
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: $slot;
+    border-color: $accent;
+  }
+
+  &.ghost {
+    background: transparent;
+    color: $muted;
+  }
+
+  &.predict {
+    background: $accent;
+    color: #fff;
+    border-color: $accent;
+
+    &:hover {
+      background: darken($accent, 8%);
+      border-color: $accent;
+    }
+  }
+}
+
+// ---- Layout: groups flank the bracket left & right ----
+.layout {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  flex: 1; // fill remaining viewport height
+  min-height: 0;
+}
+
+.layout .bracket {
+  flex: 1;
+  min-width: 0;
+}
+
+// ---- Group rails (left & right sides) ----
+.groups-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; // spread cards across the full bracket height
+  gap: 10px;
+  width: 150px;
+  flex-shrink: 0;
+}
+
+.group-card {
+  background: $panel;
+  border: 1px solid $border;
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.group-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: $muted;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.group-flags {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.group-flag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $slot;
+  border: 1px solid $border;
+  border-radius: 6px;
+  padding: 6px 4px;
+  cursor: grab;
+  transition: transform 0.1s, border-color 0.12s, opacity 0.12s;
+
+  &:hover {
+    border-color: $accent;
+    transform: translateY(-1px);
+  }
+  &:active {
+    cursor: grabbing;
+  }
+  &.is-used {
+    opacity: 0.28;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  // Real eliminated team: greyed out, struck through, "OUT" badge.
+  &.is-eliminated {
+    cursor: not-allowed;
+    border-color: rgba($danger, 0.55);
+    background: #f6e0e1;
+
+    .flag {
+      filter: grayscale(1);
+      opacity: 0.45;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 50%;
+      height: 2px;
+      background: $danger;
+      transform: rotate(-12deg);
+    }
+
+    &:hover {
+      transform: none;
+      border-color: rgba($danger, 0.55);
+    }
+  }
+}
+
+.group-flag {
+  position: relative;
+}
+
+.out-badge {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #fff;
+  background: $danger;
+  border-radius: 4px;
+  padding: 1px 4px;
+  line-height: 1.2;
+}
+
+// ---- Flags ----
+.flag {
+  width: 30px;
+  height: 21px;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+  background-size: cover;
+  display: inline-block;
+}
+
+// Breathing red "live" dot
+@keyframes live-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba($danger, 0.6);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.25);
+    box-shadow: 0 0 0 5px rgba($danger, 0);
+    opacity: 0.7;
+  }
+}
+
+// ---- Banner ----
+.banner {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+
+  h2 {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+  .banner-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    color: $danger;
+    letter-spacing: 0.1em;
+  }
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: $danger;
+    animation: live-pulse 1.4s ease-in-out infinite;
+  }
+}
+
+// ---- Bracket layout ----
+.bracket {
+  display: flex;
+  flex-direction: column;
+  background: $panel;
+  border: 1px solid $border;
+  border-radius: 14px;
+  padding: 16px;
+  min-height: 0; // flex to fit available height instead of forcing scroll
+}
+
+// Round-name header row — mirrors the body's column structure so names align.
+.bracket-head,
+.bracket-body {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+}
+
+.bracket-head {
+  margin-bottom: 10px;
+}
+
+.bracket-body {
+  flex: 1; // fill the bracket's height so columns spread out (real gaps)
+}
+
+.head-half {
+  display: flex;
+  gap: 14px;
+
+  &.head-half-R {
+    flex-direction: row-reverse;
+  }
+}
+
+.head-cell {
+  flex: 1;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: $muted;
+  white-space: nowrap;
+}
+
+.head-center {
+  min-width: 120px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: $accent;
+}
+
+.half {
+  position: relative;
+  display: flex;
+  gap: 14px;
+}
+.half-right {
+  flex-direction: row-reverse;
+}
+
+// Connector merging each half's two semi-finalists (at 25% / 75% height) into
+// its finalist box in the center. Vertical bar + a horizontal stub toward center.
+.sf-merge {
+  position: absolute;
+  top: 25%;
+  height: 50%;
+  width: 2px;
+  background: $line;
+  pointer-events: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 16px;
+    height: 2px;
+    background: $line;
+    transform: translateY(-50%);
+  }
+}
+.sf-merge-left {
+  right: -8px;
+  &::after {
+    left: 0;
+  }
+}
+.sf-merge-right {
+  left: -8px;
+  &::after {
+    right: 0;
+  }
+}
+
+.round {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  flex: 1;
+}
+
+.match-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+// ---- Connector lines between rounds ----
+// Gap between columns is 14px; connectors live in that gap (±7px).
+.conn {
+  position: absolute;
+  background: $line;
+  pointer-events: none;
+}
+
+// Outgoing horizontal stub: from a box toward the next round.
+.conn-out {
+  top: 50%;
+  width: 7px;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+// Incoming connector: a vertical bar spanning the two feeder rows, plus a
+// short horizontal stub (::after) running into this box.
+.conn-in {
+  top: 25%;
+  height: 50%;
+  width: 2px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 7px;
+    height: 2px;
+    background: $line;
+    transform: translateY(-50%);
+  }
+}
+
+// Left half: outgoing points right, incoming arrives from the left.
+.half-left {
+  .conn-out {
+    right: -7px;
+  }
+  .conn-in {
+    left: -7px;
+    &::after {
+      left: 0;
+    }
+  }
+  .round-0 .conn-in {
+    display: none; // R32 is the outermost column — nothing feeds it
+  }
+}
+
+// Right half is mirrored (row-reverse): outgoing points left, incoming from right.
+.half-right {
+  .conn-out {
+    left: -7px;
+  }
+  .conn-in {
+    right: -7px;
+    &::after {
+      right: 0;
+    }
+  }
+  .round-0 .conn-in {
+    display: none;
+  }
+}
+
+// ---- Slots ----
+.slot {
+  position: relative;
+  width: 56px;
+  height: 30px;
+  background: $slot-empty;
+  border: 1px solid $border;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s, background 0.12s;
+
+  &.is-filled {
+    background: $slot;
+    cursor: grab;
+  }
+  &.drag-over {
+    border-color: $accent;
+    background: rgba($accent, 0.14);
+  }
+}
+
+.slot-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: $muted;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.slot-clear {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: $danger;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.slot.is-filled:hover .slot-clear {
+  display: flex;
+}
+
+// ---- Center / final ----
+.center {
+  position: relative;
+  min-width: 180px;
+}
+
+// FIFA World Cup 2026 emblem, sitting in the empty space above the final.
+.emblem {
+  position: absolute;
+  top: 22%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  max-width: 80%;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+// Zeta logo in the empty space below the champion.
+.zeta-logo {
+  position: absolute;
+  bottom: -4%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  max-width: none;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+// The two finalists sit side by side at the exact vertical centre (50%), so
+// each aligns with its half's semi-final pair midpoint and the merge lines.
+.final-row {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.vs {
+  font-size: 30px;
+  font-weight: 800;
+  color: $accent;
+  letter-spacing: 0.06em;
+}
+
+.champion-wrap {
+  position: absolute;
+  top: 64%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+
+  .slot {
+    width: 70px;
+    height: 38px;
+    border-color: $accent;
+  }
+}
+
+.champion-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: $accent;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 920px) {
+  .slot {
+    width: 46px;
+    height: 26px;
+  }
+  .title-block h2 {
+    font-size: 22px;
+  }
+}
+
+// ---- Responsive: stack the side rails and let the bracket scroll ----
+@media (max-width: 1024px) {
+  .app {
+    height: auto;
+    overflow: visible; // allow normal scrolling when stacked
+  }
+
+  .layout {
+    flex-direction: column;
+  }
+
+  .groups-side {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+
+    .group-card {
+      flex: 1 1 150px;
+    }
+  }
+
+  .layout .bracket {
+    overflow-x: auto;
+
+    .bracket-head,
+    .bracket-body {
+      min-width: 900px; // keep the bracket readable; scroll if narrower
+    }
+  }
+}

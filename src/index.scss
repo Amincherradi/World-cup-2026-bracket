@@ -1,0 +1,19 @@
+@use 'flag-icons/css/flag-icons.min.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #d1ced5;
+  color: #503432;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+#root {
+  height: 100%;
+}

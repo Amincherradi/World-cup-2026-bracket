@@ -1,0 +1,286 @@
+// FIFA World Cup 2026 — 12 groups (A–L), 4 teams each.
+// `code` values are flag-icons ISO codes (gb-eng / gb-sct for the home nations).
+
+export const GROUPS = [
+  {
+    id: 'A',
+    teams: [
+      { id: 'mex', name: 'Mexico', code: 'mx' },
+      { id: 'kor', name: 'South Korea', code: 'kr' },
+      { id: 'cze', name: 'Czech Republic', code: 'cz' },
+      { id: 'rsa', name: 'South Africa', code: 'za' },
+    ],
+  },
+  {
+    id: 'B',
+    teams: [
+      { id: 'can', name: 'Canada', code: 'ca' },
+      { id: 'sui', name: 'Switzerland', code: 'ch' },
+      { id: 'bih', name: 'Bosnia-Herzegovina', code: 'ba' },
+      { id: 'qat', name: 'Qatar', code: 'qa' },
+    ],
+  },
+  {
+    id: 'C',
+    teams: [
+      { id: 'bra', name: 'Brazil', code: 'br' },
+      { id: 'mar', name: 'Morocco', code: 'ma' },
+      { id: 'sco', name: 'Scotland', code: 'gb-sct' },
+      { id: 'hai', name: 'Haiti', code: 'ht' },
+    ],
+  },
+  {
+    id: 'D',
+    teams: [
+      { id: 'usa', name: 'United States', code: 'us' },
+      { id: 'aus', name: 'Australia', code: 'au' },
+      { id: 'par', name: 'Paraguay', code: 'py' },
+      { id: 'tur', name: 'Turkey', code: 'tr' },
+    ],
+  },
+  {
+    id: 'E',
+    teams: [
+      { id: 'ger', name: 'Germany', code: 'de' },
+      { id: 'civ', name: 'Ivory Coast', code: 'ci' },
+      { id: 'ecu', name: 'Ecuador', code: 'ec' },
+      { id: 'cuw', name: 'Curaçao', code: 'cw' },
+    ],
+  },
+  {
+    id: 'F',
+    teams: [
+      { id: 'swe', name: 'Sweden', code: 'se' },
+      { id: 'jpn', name: 'Japan', code: 'jp' },
+      { id: 'ned', name: 'Netherlands', code: 'nl' },
+      { id: 'tun', name: 'Tunisia', code: 'tn' },
+    ],
+  },
+  {
+    id: 'G',
+    teams: [
+      { id: 'nzl', name: 'New Zealand', code: 'nz' },
+      { id: 'irn', name: 'Iran', code: 'ir' },
+      { id: 'bel', name: 'Belgium', code: 'be' },
+      { id: 'egy', name: 'Egypt', code: 'eg' },
+    ],
+  },
+  {
+    id: 'H',
+    teams: [
+      { id: 'uru', name: 'Uruguay', code: 'uy' },
+      { id: 'ksa', name: 'Saudi Arabia', code: 'sa' },
+      { id: 'esp', name: 'Spain', code: 'es' },
+      { id: 'cpv', name: 'Cape Verde', code: 'cv' },
+    ],
+  },
+  {
+    id: 'I',
+    teams: [
+      { id: 'nor', name: 'Norway', code: 'no' },
+      { id: 'fra', name: 'France', code: 'fr' },
+      { id: 'sen', name: 'Senegal', code: 'sn' },
+      { id: 'irq', name: 'Iraq', code: 'iq' },
+    ],
+  },
+  {
+    id: 'J',
+    teams: [
+      { id: 'arg', name: 'Argentina', code: 'ar' },
+      { id: 'aut', name: 'Austria', code: 'at' },
+      { id: 'jor', name: 'Jordan', code: 'jo' },
+      { id: 'alg', name: 'Algeria', code: 'dz' },
+    ],
+  },
+  {
+    id: 'K',
+    teams: [
+      { id: 'col', name: 'Colombia', code: 'co' },
+      { id: 'cod', name: 'Congo DR', code: 'cd' },
+      { id: 'por', name: 'Portugal', code: 'pt' },
+      { id: 'uzb', name: 'Uzbekistan', code: 'uz' },
+    ],
+  },
+  {
+    id: 'L',
+    teams: [
+      { id: 'eng', name: 'England', code: 'gb-eng' },
+      { id: 'gha', name: 'Ghana', code: 'gh' },
+      { id: 'pan', name: 'Panama', code: 'pa' },
+      { id: 'cro', name: 'Croatia', code: 'hr' },
+    ],
+  },
+];
+
+// Flat lookup: teamId -> team object
+export const TEAMS_BY_ID = Object.fromEntries(
+  GROUPS.flatMap((g) => g.teams.map((t) => [t.id, t]))
+);
+
+// ----- Bracket structure -----
+// Round of 32 position labels, taken from the reference image.
+// Left half (top→bottom) then right half (top→bottom). Each entry is one slot.
+// These are placeholders for the visual layout; exact seeding rules (Section 4)
+// can be wired in later.
+const R32_LEFT = [
+  '1E', '3 ABCDF',
+  '1I', '3 CDFGH',
+  '2A', '2B',
+  '1F', '2C',
+  '2K', '2L',
+  '1H', '2J',
+  '3 BEFGH', '1G',
+  '3 AEHIJ', '1A',
+];
+
+const R32_RIGHT = [
+  '1C', '2F',
+  '2E', '2I',
+  '1L', '3 CEFHI',
+  '1D', '3 EHIJK',
+  '1J', '2H',
+  '2D', '2G',
+  '1B', '3 EFGIJ',
+  '1K', '3 DEIJL',
+];
+
+// Build the slots for a half: 4 rounds (R32, R16, QF, SF) collapsing 16 -> 1.
+function buildHalf(side, r32Labels) {
+  const rounds = [];
+  // Round 0 — R32: 8 matches, 16 slots with labels
+  rounds.push(
+    Array.from({ length: 16 }, (_, i) => ({
+      id: `${side}-r0-s${i}`,
+      label: r32Labels[i],
+    }))
+  );
+  // Rounds 1..3 — R16 (8), QF (4), SF (2)
+  const counts = [8, 4, 2];
+  counts.forEach((count, ri) => {
+    rounds.push(
+      Array.from({ length: count }, (_, i) => ({
+        id: `${side}-r${ri + 1}-s${i}`,
+        label: '',
+      }))
+    );
+  });
+  return rounds;
+}
+
+export const BRACKET = {
+  left: buildHalf('L', R32_LEFT),
+  right: buildHalf('R', R32_RIGHT),
+  final: [
+    { id: 'final-s0', label: 'SF1' },
+    { id: 'final-s1', label: 'SF2' },
+  ],
+  champion: { id: 'champion', label: 'CHAMPION' },
+};
+
+// ----- Live snapshot from FIFA (updated 2026-06-20) -----
+// Group stage still in progress. Only Mexico and the United States (co-hosts)
+// have officially qualified for the Round of 32 so far. Placed in their group-
+// winner slots (1A / 1D). Re-run the lookup to refresh as more teams qualify.
+export const LIVE_QUALIFIED = {
+  'L-r0-s15': 'mex', // 1A — Mexico
+  'R-r0-s6': 'usa', // 1D — United States
+};
+
+export function getInitialAssignments() {
+  return { ...LIVE_QUALIFIED };
+}
+
+// ----- Real eliminated teams (live, updated 2026-06-20) -----
+// Group stage still in progress. Haiti (Group C) is the first team
+// mathematically eliminated after losing to Brazil.
+// Add team ids here as more teams are knocked out; the UI disables them.
+export const LIVE_ELIMINATED = new Set([
+  'hai', // Haiti — eliminated (lost to Brazil)
+]);
+
+const GROUPS_BY_ID = Object.fromEntries(GROUPS.map((g) => [g.id, g]));
+
+// ----- Team strength ratings (0–100), proxy for community win probability -----
+const STRENGTH = {
+  mex: 76, kor: 71, cze: 72, rsa: 64,
+  can: 70, sui: 80, bih: 72, qat: 63,
+  bra: 93, mar: 82, sco: 69, hai: 54,
+  usa: 75, aus: 68, par: 67, tur: 78,
+  ger: 88, civ: 73, ecu: 74, cuw: 52,
+  swe: 73, jpn: 79, ned: 89, tun: 69,
+  nzl: 57, irn: 71, bel: 86, egy: 72,
+  uru: 84, ksa: 65, esp: 94, cpv: 57,
+  nor: 81, fra: 95, sen: 80, irq: 62,
+  arg: 96, aut: 77, jor: 60, alg: 73,
+  col: 81, cod: 66, por: 90, uzb: 63,
+  eng: 91, gha: 70, pan: 59, cro: 85,
+};
+
+// Effective strength: eliminated teams can't advance.
+const eff = (id) => (id && !LIVE_ELIMINATED.has(id) ? STRENGTH[id] ?? 0 : -1);
+
+// Pick the winner of a matchup (higher rating wins; handles empty slots).
+const winner = (a, b) => {
+  if (!a) return b;
+  if (!b) return a;
+  return eff(a) >= eff(b) ? a : b;
+};
+
+// Fill the entire bracket based on team ratings.
+export function predictBracket() {
+  const a = {};
+
+  // 1) Seed the Round of 32.
+  const thirdSlots = [];
+  const usedThird = new Set();
+  for (const slot of [...BRACKET.left[0], ...BRACKET.right[0]]) {
+    const label = slot.label.trim();
+    const m = /^([12])([A-L])$/.exec(label);
+    if (m) {
+      // "1E" -> group winner (1st listed), "2A" -> runner-up (2nd listed)
+      a[slot.id] = GROUPS_BY_ID[m[2]].teams[Number(m[1]) - 1].id;
+    } else {
+      // "3 ABCDF" -> a best third-placed team from one of those groups
+      const letters = label.replace(/[^A-L]/g, '').split('');
+      thirdSlots.push({ slotId: slot.id, letters });
+    }
+  }
+  // For each best-third slot, take the strongest available 3rd-placed team
+  // (3rd listed) from its allowed groups.
+  for (const ts of thirdSlots) {
+    let best = null;
+    for (const L of ts.letters) {
+      const t = GROUPS_BY_ID[L].teams[2];
+      if (usedThird.has(t.id)) continue;
+      if (!best || eff(t.id) > eff(best.id)) best = t;
+    }
+    if (best) {
+      a[ts.slotId] = best.id;
+      usedThird.add(best.id);
+    }
+  }
+
+  // 2) Advance through each half: round r cell i is fed by round r-1 cells 2i, 2i+1.
+  const advanceHalf = (rounds) => {
+    for (let r = 1; r < rounds.length; r++) {
+      rounds[r].forEach((slot, i) => {
+        const f1 = a[rounds[r - 1][2 * i].id];
+        const f2 = a[rounds[r - 1][2 * i + 1].id];
+        a[slot.id] = winner(f1, f2);
+      });
+    }
+  };
+  advanceHalf(BRACKET.left);
+  advanceHalf(BRACKET.right);
+
+  // 3) Final: each half's two semi-finalists produce one finalist.
+  const leftSF = BRACKET.left[BRACKET.left.length - 1];
+  const rightSF = BRACKET.right[BRACKET.right.length - 1];
+  const leftFinalist = winner(a[leftSF[0].id], a[leftSF[1].id]);
+  const rightFinalist = winner(a[rightSF[0].id], a[rightSF[1].id]);
+  a['final-s0'] = leftFinalist;
+  a['final-s1'] = rightFinalist;
+  a['champion'] = winner(leftFinalist, rightFinalist);
+
+  return a;
+}
