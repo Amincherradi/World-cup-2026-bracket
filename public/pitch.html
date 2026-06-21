@@ -127,10 +127,9 @@
     width: 46px; height: 46px; border-radius: 10px;
     display: grid; place-items: center;
     font-family: var(--mono); font-weight: 800; font-size: 14px; letter-spacing: 0.02em;
-    color: #06121400; /* set per-team below */
+    color: #fff;
+    background: linear-gradient(160deg, #2b6fb0, #18415f); /* default; JS recolors per team */
   }
-  .crest.ecu { background: linear-gradient(160deg, #FFD200, #0033A0); color: #fff; }
-  .crest.cuw { background: linear-gradient(160deg, #0A2A8C, #1456C4); color: #fff; }
   .team .name { font-size: 13px; color: var(--muted); letter-spacing: 0.02em; }
   .score {
     font-family: var(--mono); font-weight: 800;
@@ -261,30 +260,25 @@
         </div>
       </div>
 
-      <div class="board" role="img" aria-label="Live match scoreboard: Ecuador 0, Curaçao 0, second half">
+      <div class="board" role="img" aria-label="Live match scoreboard">
         <div class="board-head">
-          <span>Group E · Matchday 2</span>
-          <span class="live-tag"><span class="pulse" aria-hidden="true"></span>LIVE</span>
+          <span id="b-meta">FIFA World Cup 2026</span>
+          <span class="live-tag" id="b-tag"><span class="pulse" aria-hidden="true"></span>LIVE</span>
         </div>
         <div class="match">
-          <div class="team"><div class="crest ecu">ECU</div><span class="name">Ecuador</span></div>
-          <div class="score"><span>0</span><span class="dash">–</span><span>0</span></div>
-          <div class="team"><div class="crest cuw">CUW</div><span class="name">Curaçao</span></div>
+          <div class="team"><div class="crest" id="b-crestH">—</div><span class="name" id="b-nameH">—</span></div>
+          <div class="score"><span id="b-scoreH">0</span><span class="dash">–</span><span id="b-scoreA">0</span></div>
+          <div class="team"><div class="crest" id="b-crestA">—</div><span class="name" id="b-nameA">—</span></div>
         </div>
-        <div class="clock"><b id="min">57′</b> · ball in play</div>
+        <div class="clock"><b id="b-clock">loading…</b><span id="b-clocksub"></span></div>
       </div>
     </div>
   </section>
 </main>
 
 <div class="ticker" aria-hidden="true">
-  <div class="ticker-track">
-    <span><span class="up">UP NEXT</span> &nbsp; <b>France</b> v <b>Iraq</b> &nbsp;·&nbsp; 22:00</span>
-    <span><b>Norway</b> v <b>Senegal</b> &nbsp;·&nbsp; 01:00</span>
-    <span><b>Jordan</b> v <b>Algeria</b> &nbsp;·&nbsp; 04:00</span>
-    <span><b>Portugal</b> v <b>Uzbekistan</b> &nbsp;·&nbsp; 18:00</span>
-    <span><b>England</b> v <b>Ghana</b> &nbsp;·&nbsp; 21:00</span>
-    <span><b>Argentina</b> v <b>Austria</b> &nbsp;·&nbsp; 18:00</span>
+  <div class="ticker-track" id="ticker-track">
+    <span><span class="up">UP NEXT</span> &nbsp; loading fixtures…</span>
   </div>
 </div>
 
@@ -375,16 +369,92 @@
 <footer>BRACKETLIVE · live tournament bracket · independent project by Amine Cherradi</footer>
 
 <script>
-  // One small, honest motion: the match clock ticks while the page is open.
+  // The hero scoreboard pulls REAL data from the same /api/live proxy the app
+  // uses (same origin on Vercel). Shows a live match if one is in progress,
+  // otherwise the next upcoming fixture. Falls back gracefully if offline.
   (function () {
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    var el = document.getElementById('min');
-    if (!el) return;
-    var m = 57;
-    setInterval(function () {
-      m = m >= 90 ? 90 : m + 1;
-      el.textContent = m + (m >= 90 ? "+′" : "′");
-    }, 4000);
+    var LIVE = ['IN_PLAY', 'PAUSED'];
+    var UP = ['TIMED', 'SCHEDULED'];
+    var $ = function (id) { return document.getElementById(id); };
+
+    function tla(team) {
+      if (team && team.tla) return team.tla;
+      var n = (team && team.shortName) || (team && team.name) || '—';
+      return n.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || '—';
+    }
+    function hue(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
+    function paintCrest(el, team) {
+      var t = tla(team); el.textContent = t;
+      var h = hue(t);
+      el.style.background = 'linear-gradient(160deg, hsl(' + h + ',55%,42%), hsl(' + ((h + 40) % 360) + ',60%,30%))';
+      el.style.color = '#fff';
+    }
+    function kickoff(d) {
+      var dt = new Date(d), now = new Date();
+      var t = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (dt.toDateString() === now.toDateString()) return t;
+      return dt.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + t;
+    }
+    function estMinute(d) {
+      var mins = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
+      if (mins < 0) return 'LIVE';
+      if (mins <= 45) return Math.max(1, mins) + '′';
+      if (mins <= 60) return 'HT';
+      var s = mins - 15; return (s >= 90 ? '90+' : s) + '′';
+    }
+    function groupLabel(m) {
+      var parts = [];
+      if (m.group) parts.push(m.group.replace(/_/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); }));
+      if (m.matchday) parts.push('Matchday ' + m.matchday);
+      return parts.join(' · ') || 'FIFA World Cup 2026';
+    }
+
+    function renderBoard(m, live) {
+      $('b-meta').textContent = groupLabel(m);
+      paintCrest($('b-crestH'), m.homeTeam);
+      paintCrest($('b-crestA'), m.awayTeam);
+      $('b-nameH').textContent = (m.homeTeam && m.homeTeam.name) || '—';
+      $('b-nameA').textContent = (m.awayTeam && m.awayTeam.name) || '—';
+      var ft = (m.score && m.score.fullTime) || {};
+      var tag = $('b-tag');
+      if (live) {
+        $('b-scoreH').textContent = ft.home == null ? 0 : ft.home;
+        $('b-scoreA').textContent = ft.away == null ? 0 : ft.away;
+        tag.style.display = '';
+        var min = m.status === 'PAUSED' ? 'HT' : estMinute(m.utcDate);
+        $('b-clock').textContent = min;
+        $('b-clocksub').textContent = ' · ball in play';
+      } else {
+        $('b-scoreH').textContent = '–';
+        $('b-scoreA').textContent = '–';
+        tag.style.display = 'none';
+        $('b-clock').textContent = 'Kicks off ' + kickoff(m.utcDate);
+        $('b-clocksub').textContent = '';
+      }
+    }
+
+    function renderTicker(ups) {
+      var track = $('ticker-track');
+      if (!ups.length) return;
+      var html = '<span class="up">UP NEXT</span>';
+      ups.slice(0, 8).forEach(function (m) {
+        html += '<span><b>' + ((m.homeTeam && m.homeTeam.name) || '?') + '</b> v <b>' +
+          ((m.awayTeam && m.awayTeam.name) || '?') + '</b> &nbsp;·&nbsp; ' + kickoff(m.utcDate) + '</span>';
+      });
+      track.innerHTML = html + html; // duplicate for seamless loop
+    }
+
+    fetch('/api/live').then(function (r) { return r.json(); }).then(function (j) {
+      var ms = (j && j.matches) || [];
+      if (!ms.length) return; // keep the loading text if no data / no token
+      var live = ms.filter(function (m) { return LIVE.indexOf(m.status) >= 0; });
+      var ups = ms.filter(function (m) { return UP.indexOf(m.status) >= 0; })
+        .sort(function (a, b) { return new Date(a.utcDate) - new Date(b.utcDate); });
+
+      if (live.length) renderBoard(live[0], true);
+      else if (ups.length) renderBoard(ups[0], false);
+      renderTicker(ups);
+    }).catch(function () { /* offline — leave defaults */ });
   })();
 </script>
 
