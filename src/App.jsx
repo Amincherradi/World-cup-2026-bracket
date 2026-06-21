@@ -342,7 +342,7 @@ export default function App() {
               <img className="emblem" src={emblem} alt="FIFA World Cup 2026 emblem" />
               <span className="banner-live">
                 <span className="live-dot" />
-                LIVE
+                LIVE BRACKET
               </span>
             </div>
             <div className="final-row">

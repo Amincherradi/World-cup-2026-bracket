@@ -242,10 +242,20 @@ function estimateMinute(utcDate) {
   return second >= 90 ? "90+'" : `${second}'`;
 }
 
+// A match can't realistically still be running this long after kickoff (90' +
+// half-time + stoppage + extra time + penalties, with margin). The free feed
+// sometimes lags on FINISHED, leaving a finished game stuck on PAUSED/IN_PLAY —
+// this guards against showing "HT" for a game that's actually over.
+const MAX_LIVE_MS = 150 * 60 * 1000;
+
 // football-data in-play matches -> live-card shape (same as fetchLiveMatches).
 function liveFromFootballData(matches) {
   return matches
     .filter((m) => FD_LIVE_STATUSES.includes(m.status))
+    .filter((m) => {
+      if (!m.utcDate) return true;
+      return Date.now() - new Date(m.utcDate).getTime() < MAX_LIVE_MS;
+    })
     .map((m) => {
       const homeId = resolveId(m.homeTeam?.name);
       const awayId = resolveId(m.awayTeam?.name);
