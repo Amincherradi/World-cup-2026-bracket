@@ -125,6 +125,17 @@ $danger: #bf3337; // tomato-jam — live / eliminated
       border-color: $accent;
     }
   }
+
+  &.share {
+    background: transparent;
+    color: $accent;
+    border-color: $accent;
+
+    &:hover {
+      background: rgba($accent, 0.1);
+      border-color: $accent;
+    }
+  }
 }
 
 // ---- Live match cards (Google-style score + minute) ----

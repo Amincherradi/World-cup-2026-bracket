@@ -65,6 +65,9 @@ export default function App() {
   // Upcoming fixtures, scrolled in a marquee next to the live cards.
   const [upcoming, setUpcoming] = useState([]);
 
+  // Brief hint when Share is tapped with no champion picked yet.
+  const [shareHint, setShareHint] = useState(false);
+
   // Latest live snapshot, so "Reset to live" reflects the most recent fetch.
   const liveSnapshot = useRef({
     assignments: getInitialAssignments(),
@@ -235,6 +238,19 @@ export default function App() {
     setSelected(null);
   };
 
+  // Export the current bracket as a shareable image. Nudge the user to fill the
+  // final first if there's no champion yet.
+  const handleShare = async () => {
+    if (!assignments[BRACKET.champion.id]) {
+      setShareHint(true);
+      setTimeout(() => setShareHint(false), 2600);
+      return;
+    }
+    // Lazy-loaded so the flag assets aren't in the main bundle.
+    const { sharePredictionCard } = await import('./shareCard');
+    sharePredictionCard(assignments);
+  };
+
   const slotProps = {
     onDrop: handleDrop,
     onDragStart: handleSlotDragStart,
@@ -296,6 +312,9 @@ export default function App() {
           </span>
           <button type="button" className="reset-btn predict" onClick={handlePredict}>
             Predict
+          </button>
+          <button type="button" className="reset-btn share" onClick={handleShare}>
+            Share
           </button>
           <button type="button" className="reset-btn" onClick={handleResetLive}>
             Reset to live
@@ -428,6 +447,12 @@ export default function App() {
           <button type="button" onClick={() => setSelected(null)}>
             Cancel
           </button>
+        </div>
+      )}
+
+      {shareHint && (
+        <div className="tap-hint" role="status">
+          Pick a champion first — hit <strong>Predict</strong> or fill the final, then Share.
         </div>
       )}
 
