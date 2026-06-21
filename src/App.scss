@@ -21,6 +21,13 @@ $danger: #bf3337; // tomato-jam — live / eliminated
   overflow: hidden; // page fixed to viewport, no scroll
 }
 
+// Embed/widget mode (?embed=1): tighter chrome for dropping into a partner site.
+.app.embed {
+  padding: 10px 14px;
+
+  .topbar { margin-bottom: 10px; }
+}
+
 // ---- Top bar ----
 .topbar {
   display: flex;

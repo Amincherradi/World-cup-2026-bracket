@@ -45,6 +45,13 @@ function Credits() {
 // Round names per column, outermost -> innermost (matches BRACKET.left order).
 const ROUND_NAMES = ['ROUND OF 32', 'ROUND OF 16', 'QUARTER-FINALS', 'SEMI-FINALS'];
 
+// Embed/widget mode for iframing into a partner's site: `?embed=1` strips the
+// page chrome (predict callout, credits) for a clean drop-in. `&controls=0`
+// additionally hides the action buttons for a read-only live bracket.
+const params = new URLSearchParams(window.location.search);
+const EMBED = params.get('embed') === '1';
+const SHOW_CONTROLS = params.get('controls') !== '0';
+
 export default function App() {
   // slotId -> teamId. Seeded with the static snapshot for an instant first
   // paint, then replaced by the live API result once it arrives.
@@ -292,7 +299,7 @@ export default function App() {
     ));
 
   return (
-    <div className="app">
+    <div className={`app${EMBED ? ' embed' : ''}`}>
       <header className="topbar">
         <h1 className="wordmark">
           {OFFICIAL_BRANDING ? (
@@ -306,23 +313,27 @@ export default function App() {
         <div className="banner">
           <h2>BRACKET</h2>
         </div>
-        <div className="actions">
-          <span className="predict-note">
-            <strong>Predict</strong> uses worldwide community current probabilities — not my own picks.
-          </span>
-          <button type="button" className="reset-btn predict" onClick={handlePredict}>
-            Predict
-          </button>
-          <button type="button" className="reset-btn share" onClick={handleShare}>
-            Share
-          </button>
-          <button type="button" className="reset-btn" onClick={handleResetLive}>
-            Reset to live
-          </button>
-          <button type="button" className="reset-btn ghost" onClick={handleClearAll}>
-            Clear all
-          </button>
-        </div>
+        {SHOW_CONTROLS && (
+          <div className="actions">
+            {!EMBED && (
+              <span className="predict-note">
+                <strong>Predict</strong> uses worldwide community current probabilities — not my own picks.
+              </span>
+            )}
+            <button type="button" className="reset-btn predict" onClick={handlePredict}>
+              Predict
+            </button>
+            <button type="button" className="reset-btn share" onClick={handleShare}>
+              Share
+            </button>
+            <button type="button" className="reset-btn" onClick={handleResetLive}>
+              Reset to live
+            </button>
+            <button type="button" className="reset-btn ghost" onClick={handleClearAll}>
+              Clear all
+            </button>
+          </div>
+        )}
       </header>
 
       {(liveMatches.length > 0 || upcoming.length > 0) && (
@@ -402,9 +413,11 @@ export default function App() {
               />
               <span className="champion-label">CHAMPION</span>
             </div>
-            <div className="center-footer zeta-box" role="img" aria-label="Zeta">
-              <Credits />
-            </div>
+            {!EMBED && (
+              <div className="center-footer zeta-box" role="img" aria-label="Zeta">
+                <Credits />
+              </div>
+            )}
           </div>
 
           <div className="half half-right">
@@ -434,12 +447,14 @@ export default function App() {
       </div>
 
       {/* Zeta logo + credits — shown at the bottom on phones, where the center
-          column is too cramped to hold them. Hidden on desktop. */}
-      <footer className="page-footer">
-        <div className="zeta-box" role="img" aria-label="Zeta">
-          <Credits />
-        </div>
-      </footer>
+          column is too cramped to hold them. Hidden on desktop and in embeds. */}
+      {!EMBED && (
+        <footer className="page-footer">
+          <div className="zeta-box" role="img" aria-label="Zeta">
+            <Credits />
+          </div>
+        </footer>
+      )}
 
       {selected && (
         <div className="tap-hint" role="status">

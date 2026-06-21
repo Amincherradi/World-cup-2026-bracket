@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="BracketLive — a live, self-updating tournament bracket. Real-time scores, automatic eliminations, shareable predictions, one-iframe embed." />
+<title>BracketLive — Pitch</title>
+<style>
+  :root {
+    --ground: #0B1A1F;
+    --ground-2: #0F252B;
+    --panel: #122C33;
+    --line: #1E3D45;
+    --text: #EAF2F0;
+    --muted: #8FB0AC;
+    --accent: #FF3B3B;     /* live red — from the app's LIVE badge */
+    --accent-2: #5CE1C6;   /* turf mint — data highlights */
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 600px at 75% -10%, rgba(92,225,198,0.10), transparent 60%),
+      radial-gradient(900px 500px at 10% 110%, rgba(255,59,59,0.08), transparent 55%),
+      var(--ground);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* eyebrow / label utility */
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--accent-2);
+    margin: 0 0 14px;
+  }
+
+  /* ---------- top bar ---------- */
+  .top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 24px;
+    max-width: 1080px; margin: 0 auto;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 800; letter-spacing: 0.04em; font-size: 18px;
+  }
+  .brand b { color: var(--text); }
+  .brand .lite { color: var(--accent-2); }
+  .pulse {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(255,59,59,0.6);
+    animation: pulse 1.5s ease-out infinite;
+  }
+  .top .demo {
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.04em;
+    color: var(--text); text-decoration: none;
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 16px; transition: border-color .15s, color .15s;
+  }
+  .top .demo:hover { border-color: var(--accent-2); color: var(--accent-2); }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 40px 0 56px; }
+  .hero-grid {
+    display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 48px; align-items: center;
+  }
+  h1 {
+    font-size: clamp(38px, 6vw, 68px);
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+    font-weight: 850;
+    margin: 0 0 22px;
+    text-transform: uppercase;
+  }
+  h1 .hl { color: var(--accent); }
+  .lede {
+    font-size: clamp(16px, 2vw, 19px);
+    color: var(--muted);
+    max-width: 30em;
+    margin: 0 0 30px;
+  }
+  .cta-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    font-family: var(--mono); font-size: 14px; letter-spacing: 0.04em;
+    text-decoration: none; border-radius: 999px; padding: 13px 24px;
+    font-weight: 700; transition: transform .12s, background .15s, border-color .15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { transform: translateY(-2px); }
+  .btn-ghost { color: var(--text); border: 1px solid var(--line); }
+  .btn-ghost:hover { border-color: var(--accent-2); color: var(--accent-2); }
+
+  /* ---------- scoreboard hero card ---------- */
+  .board {
+    background: linear-gradient(180deg, var(--panel), var(--ground-2));
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 30px 70px -30px rgba(0,0,0,0.7);
+  }
+  .board-head {
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 18px;
+  }
+  .live-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: #fff; background: var(--accent);
+    border-radius: 999px; padding: 3px 10px; font-weight: 800; letter-spacing: 0.12em;
+  }
+  .live-tag .pulse { background: #fff; box-shadow: 0 0 0 0 rgba(255,255,255,0.7); }
+  .match { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+  .team { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .crest {
+    width: 46px; height: 46px; border-radius: 10px;
+    display: grid; place-items: center;
+    font-family: var(--mono); font-weight: 800; font-size: 14px; letter-spacing: 0.02em;
+    color: #06121400; /* set per-team below */
+  }
+  .crest.ecu { background: linear-gradient(160deg, #FFD200, #0033A0); color: #fff; }
+  .crest.cuw { background: linear-gradient(160deg, #0A2A8C, #1456C4); color: #fff; }
+  .team .name { font-size: 13px; color: var(--muted); letter-spacing: 0.02em; }
+  .score {
+    font-family: var(--mono); font-weight: 800;
+    font-size: clamp(40px, 7vw, 58px); letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .score .dash { color: var(--muted); font-weight: 400; }
+  .clock {
+    margin-top: 18px; text-align: center;
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.1em; color: var(--accent-2);
+  }
+  .clock b { color: var(--text); }
+
+  /* ---------- ticker ---------- */
+  .ticker {
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    background: rgba(255,255,255,0.02);
+    overflow: hidden; white-space: nowrap; padding: 12px 0;
+  }
+  .ticker-track {
+    display: inline-flex; gap: 40px; padding-left: 100%;
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.06em; color: var(--muted);
+    animation: ticker 26s linear infinite;
+  }
+  .ticker-track b { color: var(--text); }
+  .ticker-track .up { color: var(--accent-2); }
+
+  /* ---------- generic section ---------- */
+  section { padding: 76px 0; border-bottom: 1px solid var(--line); }
+  .sec-title {
+    font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -0.01em;
+    margin: 0 0 8px; text-transform: uppercase;
+  }
+  .sec-sub { color: var(--muted); margin: 0 0 40px; max-width: 46em; font-size: 17px; }
+
+  /* contrast: static vs live */
+  .versus { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .vs-card { border: 1px solid var(--line); border-radius: 16px; padding: 26px; background: var(--ground-2); }
+  .vs-card.dead { opacity: 0.72; }
+  .vs-card h3 { margin: 0 0 18px; font-size: 14px; letter-spacing: 0.16em; text-transform: uppercase; font-family: var(--mono); }
+  .vs-card.dead h3 { color: var(--muted); }
+  .vs-card.alive h3 { color: var(--accent-2); }
+  .vs-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .vs-card li { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; }
+  .mark { font-family: var(--mono); flex: 0 0 auto; width: 18px; }
+  .dead .mark { color: var(--muted); }
+  .alive .mark { color: var(--accent-2); }
+
+  /* capability grid */
+  .caps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .cap { border: 1px solid var(--line); border-radius: 14px; padding: 24px; background: var(--ground-2); }
+  .cap .n { font-family: var(--mono); color: var(--accent); font-size: 13px; letter-spacing: 0.1em; }
+  .cap h4 { margin: 12px 0 8px; font-size: 18px; }
+  .cap p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  /* market */
+  .market { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .seg { border: 1px solid var(--line); border-left: 3px solid var(--accent-2); border-radius: 12px; padding: 22px; background: var(--ground-2); }
+  .seg h4 { margin: 0 0 8px; font-size: 16px; }
+  .seg p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  /* embed */
+  .embed-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: center; }
+  .code {
+    background: #08161A; border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px; overflow-x: auto;
+  }
+  .code pre { margin: 0; font-family: var(--mono); font-size: 13px; line-height: 1.7; color: var(--text); }
+  .code .tag { color: var(--accent-2); }
+  .code .attr { color: var(--accent); }
+  .code .str { color: #E8C37A; }
+  .embed-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+  .embed-list li { display: flex; gap: 12px; font-size: 15px; color: var(--muted); }
+  .embed-list b { color: var(--text); font-weight: 700; }
+  .embed-list .mk { color: var(--accent-2); font-family: var(--mono); flex: 0 0 auto; }
+
+  /* the ask */
+  .ask { text-align: center; border-bottom: none; }
+  .ask .sec-sub { margin-left: auto; margin-right: auto; }
+  .contact {
+    display: inline-flex; flex-direction: column; gap: 10px; align-items: center;
+    margin-top: 26px; font-family: var(--mono); font-size: 15px;
+  }
+  .contact a { color: var(--accent-2); text-decoration: none; }
+  .contact a:hover { text-decoration: underline; }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 30px 0 50px; font-family: var(--mono); letter-spacing: 0.04em; }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255,59,59,0.6); }
+    70% { box-shadow: 0 0 0 9px rgba(255,59,59,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,59,59,0); }
+  }
+  @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+  @media (max-width: 820px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 34px; }
+    .versus, .caps, .market, .embed-wrap { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pulse, .ticker-track { animation: none; }
+    .ticker-track { padding-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+
+<header class="top">
+  <div class="brand"><span class="pulse" aria-hidden="true"></span><b>BRACKET</b><span class="lite">LIVE</span></div>
+  <a class="demo" href="https://world-cup-2026-bracket-five.vercel.app" target="_blank" rel="noreferrer">View live demo →</a>
+</header>
+
+<main class="wrap">
+  <section class="hero" style="border-bottom:none">
+    <div class="hero-grid">
+      <div>
+        <p class="eyebrow">Live tournament bracket · built for 2026</p>
+        <h1>Every bracket is a printout.<br><span class="hl">This one is alive.</span></h1>
+        <p class="lede">
+          A drag-and-drop knockout bracket that updates itself from real match data —
+          live scores and minutes, automatic eliminations, and a one-tap prediction
+          seeded from results that have actually happened. No refresh, no manual entry.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://world-cup-2026-bracket-five.vercel.app" target="_blank" rel="noreferrer">Open the live demo</a>
+          <a class="btn btn-ghost" href="#ask">Talk to me</a>
+        </div>
+      </div>
+
+      <div class="board" role="img" aria-label="Live match scoreboard: Ecuador 0, Curaçao 0, second half">
+        <div class="board-head">
+          <span>Group E · Matchday 2</span>
+          <span class="live-tag"><span class="pulse" aria-hidden="true"></span>LIVE</span>
+        </div>
+        <div class="match">
+          <div class="team"><div class="crest ecu">ECU</div><span class="name">Ecuador</span></div>
+          <div class="score"><span>0</span><span class="dash">–</span><span>0</span></div>
+          <div class="team"><div class="crest cuw">CUW</div><span class="name">Curaçao</span></div>
+        </div>
+        <div class="clock"><b id="min">57′</b> · ball in play</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track">
+    <span><span class="up">UP NEXT</span> &nbsp; <b>France</b> v <b>Iraq</b> &nbsp;·&nbsp; 22:00</span>
+    <span><b>Norway</b> v <b>Senegal</b> &nbsp;·&nbsp; 01:00</span>
+    <span><b>Jordan</b> v <b>Algeria</b> &nbsp;·&nbsp; 04:00</span>
+    <span><b>Portugal</b> v <b>Uzbekistan</b> &nbsp;·&nbsp; 18:00</span>
+    <span><b>England</b> v <b>Ghana</b> &nbsp;·&nbsp; 21:00</span>
+    <span><b>Argentina</b> v <b>Austria</b> &nbsp;·&nbsp; 18:00</span>
+  </div>
+</div>
+
+<main class="wrap">
+  <section>
+    <p class="eyebrow">The difference</p>
+    <h2 class="sec-title">Static brackets go stale by halftime</h2>
+    <p class="sec-sub">The printable PDF and the typical predictor widget stop being true the moment a match kicks off. BracketLive stays correct on its own.</p>
+    <div class="versus">
+      <div class="vs-card dead">
+        <h3>The usual bracket</h3>
+        <ul>
+          <li><span class="mark">✕</span> Filled in by hand — wrong the second a result lands</li>
+          <li><span class="mark">✕</span> No scores, no clock, no sense of “now”</li>
+          <li><span class="mark">✕</span> Predictions ignore games already played</li>
+          <li><span class="mark">✕</span> One tournament, then it’s thrown away</li>
+        </ul>
+      </div>
+      <div class="vs-card alive">
+        <h3>BracketLive</h3>
+        <ul>
+          <li><span class="mark">✓</span> Auto-fills from real results; teams advance and drop out on their own</li>
+          <li><span class="mark">✓</span> Live scores and match minute, scoreboard-style</li>
+          <li><span class="mark">✓</span> One-tap predict, seeded from matches actually played</li>
+          <li><span class="mark">✓</span> Reusable shell — drop in any cup format</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Under the hood</p>
+    <h2 class="sec-title">Engineered to stay live and stay up</h2>
+    <p class="sec-sub">Not a mock-up. A working product with a real data pipeline and graceful fallbacks, already deployed.</p>
+    <div class="caps">
+      <div class="cap"><div class="n">01</div><h4>Real-time data</h4><p>Polls live fixtures on a fast cadence; running score and minute refresh without a reload.</p></div>
+      <div class="cap"><div class="n">02</div><h4>Self-resolving bracket</h4><p>Group standings, clinched spots, best-third placement and eliminations are computed from results — no manual upkeep.</p></div>
+      <div class="cap"><div class="n">03</div><h4>Layered fallbacks</h4><p>Premium feed → free feed → cached snapshot. The board always renders something correct, even if a source fails.</p></div>
+      <div class="cap"><div class="n">04</div><h4>Predict engine</h4><p>One tap projects the full knockout path from current form and real outcomes — built for engagement and shares.</p></div>
+      <div class="cap"><div class="n">05</div><h4>Drag, tap, play</h4><p>Drag on desktop, tap-to-place on phones, with a bracket that scales to fit any screen edge-to-edge.</p></div>
+      <div class="cap"><div class="n">06</div><h4>Format-agnostic</h4><p>The 48-team layout is data-driven, so the same engine adapts to other cups, leagues and seasons.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Where it fits</p>
+    <h2 class="sec-title">A fan-engagement surface, ready to embed</h2>
+    <p class="sec-sub">The same product slots into very different businesses — as a white-label widget, a campaign page, or an acquired feature.</p>
+    <div class="market">
+      <div class="seg"><h4>Broadcasters & media</h4><p>An always-live bracket page and embeddable widget that keeps fans on-site through the tournament.</p></div>
+      <div class="seg"><h4>Fantasy & predictions</h4><p>A ready-made predict-and-share loop to drive sign-ups and daily returns during a cup run.</p></div>
+      <div class="seg"><h4>Federations & sponsors</h4><p>A branded, official-feeling companion experience for an event — web, mobile, second screen.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Integration</p>
+    <h2 class="sec-title">Live on your site in five minutes</h2>
+    <p class="sec-sub">No SDK, no backend work. Embed mode renders a chromeless, self-updating bracket you drop in with one iframe — read-only or interactive.</p>
+    <div class="embed-wrap">
+      <div class="code"><pre>&lt;<span class="tag">iframe</span>
+  <span class="attr">src</span>=<span class="str">"…/?embed=1&controls=0"</span>
+  <span class="attr">width</span>=<span class="str">"100%"</span> <span class="attr">height</span>=<span class="str">"800"</span>
+  <span class="attr">style</span>=<span class="str">"border:0"</span>
+  <span class="attr">title</span>=<span class="str">"Live bracket"</span>&gt;
+&lt;/<span class="tag">iframe</span>&gt;</pre></div>
+      <ul class="embed-list">
+        <li><span class="mk">→</span><span><b>Chromeless embed mode</b> — your page, your frame, just the bracket.</span></li>
+        <li><span class="mk">→</span><span><b>Read-only or interactive</b> — one flag toggles fan editing on or off.</span></li>
+        <li><span class="mk">→</span><span><b>Self-updating</b> — scores, minutes and eliminations refresh on their own.</span></li>
+        <li><span class="mk">→</span><span><b>White-label ready</b> — swap colors and naming to match your brand.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="ask" id="ask">
+    <p class="eyebrow">The ask</p>
+    <h2 class="sec-title">Let’s talk before the group stage ends</h2>
+    <p class="sec-sub">I built and shipped BracketLive solo. I’m open to a license, a white-label build, or an acquisition — and I can tailor a demo to your brand in days. Try the live version, then let’s find 20 minutes.</p>
+    <div class="contact">
+      <span><a href="https://world-cup-2026-bracket-five.vercel.app" target="_blank" rel="noreferrer">world-cup-2026-bracket-five.vercel.app</a></span>
+      <span>Amine Cherradi · <a href="mailto:amine.cherradi.pro@gmail.com">amine.cherradi.pro@gmail.com</a></span>
+      <span><a href="https://github.com/Amincherradi" target="_blank" rel="noreferrer">github.com/Amincherradi</a></span>
+    </div>
+  </section>
+</main>
+
+<footer>BRACKETLIVE · live tournament bracket · independent project by Amine Cherradi</footer>
+
+<script>
+  // One small, honest motion: the match clock ticks while the page is open.
+  (function () {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var el = document.getElementById('min');
+    if (!el) return;
+    var m = 57;
+    setInterval(function () {
+      m = m >= 90 ? 90 : m + 1;
+      el.textContent = m + (m >= 90 ? "+′" : "′");
+    }, 4000);
+  })();
+</script>
+
+</body>
+</html>

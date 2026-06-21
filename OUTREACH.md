@@ -1,7 +1,7 @@
 # BracketLive — Outreach Plan
 
 Demo: https://world-cup-2026-bracket-five.vercel.app
-Pitch page: (your Claude artifact link)
+Pitch page: https://world-cup-2026-bracket-five.vercel.app/pitch.html
 Contact: Amine Cherradi · amine.cherradi.pro@gmail.com · github.com/Amincherradi
 
 ---
