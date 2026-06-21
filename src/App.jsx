@@ -7,10 +7,11 @@ import {
   predictBracket,
   LIVE_ELIMINATED,
 } from './data';
-import { fetchLive, fetchLiveMatches, POLL_MS, LIVE_POLL_MS } from './liveData';
+import { fetchLive, fetchLiveMatches, fetchUpcomingMatches, POLL_MS, LIVE_POLL_MS } from './liveData';
 import GroupCard from './components/GroupCard';
 import Slot from './components/Slot';
 import LiveMatches from './components/LiveMatches';
+import UpcomingMarquee from './components/UpcomingMarquee';
 import emblem from './assets/2026_FIFA_World_Cup_emblem.svg.webp';
 import { Analytics } from '@vercel/analytics/react';
 import './App.scss';
@@ -58,6 +59,9 @@ export default function App() {
 
   // Matches currently in progress (score + minute), shown in the header.
   const [liveMatches, setLiveMatches] = useState([]);
+
+  // Upcoming fixtures, scrolled in a marquee next to the live cards.
+  const [upcoming, setUpcoming] = useState([]);
 
   // Latest live snapshot, so "Reset to live" reflects the most recent fetch.
   const liveSnapshot = useRef({
@@ -113,8 +117,13 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     const refresh = async () => {
-      const matches = await fetchLiveMatches();
-      if (!cancelled) setLiveMatches(matches);
+      const [matches, next] = await Promise.all([
+        fetchLiveMatches(),
+        fetchUpcomingMatches(),
+      ]);
+      if (cancelled) return;
+      setLiveMatches(matches);
+      setUpcoming(next);
     };
     refresh();
     const timer = setInterval(refresh, LIVE_POLL_MS);
@@ -271,7 +280,6 @@ export default function App() {
         <div className="banner">
           <h2>BRACKET</h2>
         </div>
-        <LiveMatches matches={liveMatches} />
         <div className="actions">
           <span className="predict-note">
             <strong>Predict</strong> uses worldwide community current probabilities — not my own picks.
@@ -287,6 +295,13 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {(liveMatches.length > 0 || upcoming.length > 0) && (
+        <div className="header-feed">
+          <LiveMatches matches={liveMatches} />
+          <UpcomingMarquee matches={upcoming} />
+        </div>
+      )}
 
       <div className="layout">
       {/* Left groups A–F */}

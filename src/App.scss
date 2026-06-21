@@ -126,11 +126,7 @@ $danger: #bf3337; // tomato-jam — live / eliminated
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-  &::-webkit-scrollbar { display: none; }
+  flex: 0 0 auto; // keep live cards at full size; never shrink them
 }
 
 .live-card {
@@ -154,7 +150,7 @@ $danger: #bf3337; // tomato-jam — live / eliminated
   }
 
   .lc-name {
-    max-width: 64px;
+    max-width: 90px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -205,6 +201,115 @@ $danger: #bf3337; // tomato-jam — live / eliminated
 @keyframes live-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+// Header feed: full-width ticker bar (live cards + upcoming marquee) sitting on
+// its own row just under the top bar, so nothing fights for space in the header.
+.header-feed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: -4px 0 12px;
+  padding: 8px 12px;
+  background: $panel;
+  border: 1px solid $border;
+  border-radius: 12px;
+  min-width: 0;
+}
+
+// ---- Upcoming fixtures marquee ----
+.upcoming {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.up-label {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: $muted;
+  background: $panel-2;
+  border: 1px solid $border;
+  border-radius: 6px;
+  padding: 3px 7px;
+}
+
+.up-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  // soft fade at both edges so cards slide in/out gracefully
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.up-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  width: max-content;
+  animation: marquee 40s linear infinite;
+}
+
+.upcoming:hover .up-track {
+  animation-play-state: paused; // pause on hover so you can read a fixture
+}
+
+// Each upcoming fixture is its own card, matching the live cards.
+.up-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: $text;
+  background: $panel-2;
+  border: 1px solid $border;
+  border-radius: 10px;
+  padding: 5px 10px;
+  box-shadow: 0 2px 6px rgba(#000, 0.06);
+
+  .flag {
+    width: 18px;
+    height: 13px;
+    border-radius: 2px;
+    flex: 0 0 auto;
+  }
+}
+
+.up-team {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.up-kick {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: $accent;
+  background: rgba($accent, 0.12);
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+
+.up-v {
+  color: $muted;
+  font-weight: 700;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); } // half = one full copy of the list
 }
 
 // ---- Layout: groups flank the bracket left & right ----

@@ -272,6 +272,41 @@ function liveFromFootballData(matches) {
     });
 }
 
+// football-data upcoming matches -> compact "next up" shape, soonest first.
+const FD_UPCOMING_STATUSES = ['TIMED', 'SCHEDULED'];
+function upcomingFromFootballData(matches, limit = 16) {
+  return matches
+    .filter((m) => FD_UPCOMING_STATUSES.includes(m.status) && m.utcDate)
+    .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))
+    .slice(0, limit)
+    .map((m) => {
+      const homeId = resolveId(m.homeTeam?.name);
+      const awayId = resolveId(m.awayTeam?.name);
+      const gm = /([a-l])\s*$/i.exec(m.group || '');
+      return {
+        id: m.id,
+        home: TEAMS_BY_ID[homeId]?.name ?? m.homeTeam?.name,
+        away: TEAMS_BY_ID[awayId]?.name ?? m.awayTeam?.name,
+        code1: TEAMS_BY_ID[homeId]?.code ?? null,
+        code2: TEAMS_BY_ID[awayId]?.code ?? null,
+        utcDate: m.utcDate,
+        group: gm ? gm[1].toUpperCase() : null,
+      };
+    });
+}
+
+// Upcoming fixtures for the header marquee. Only the free football-data source
+// is wired here (the live cards already cover the API-Football path); returns []
+// if unavailable so the marquee simply doesn't render.
+export async function fetchUpcomingMatches() {
+  try {
+    return upcomingFromFootballData(await fetchFootballDataMatches());
+  } catch (err) {
+    console.warn('[liveData] upcoming matches unavailable:', err.message);
+    return [];
+  }
+}
+
 // ----- Standings & qualification logic -----
 
 // Points/GD/GF table for a set of played results within one group.
