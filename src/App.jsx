@@ -12,6 +12,8 @@ import GroupCard from './components/GroupCard';
 import Slot from './components/Slot';
 import LiveMatches from './components/LiveMatches';
 import UpcomingMarquee from './components/UpcomingMarquee';
+import BrandMark from './components/BrandMark';
+import { OFFICIAL_BRANDING, BRAND } from './brand';
 import emblem from './assets/2026_FIFA_World_Cup_emblem.svg.webp';
 import { Analytics } from '@vercel/analytics/react';
 import './App.scss';
@@ -276,7 +278,15 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>World Cup 2026</h1>
+        <h1 className="wordmark">
+          {OFFICIAL_BRANDING ? (
+            BRAND.name
+          ) : (
+            <>
+              Bracket<span className="wm-live">Live</span>
+            </>
+          )}
+        </h1>
         <div className="banner">
           <h2>BRACKET</h2>
         </div>
@@ -339,7 +349,11 @@ export default function App() {
 
           <div className="center">
             <div className="emblem-wrap">
-              <img className="emblem" src={emblem} alt="FIFA World Cup 2026 emblem" />
+              {OFFICIAL_BRANDING ? (
+                <img className="emblem" src={emblem} alt={BRAND.markAlt} />
+              ) : (
+                <BrandMark className="emblem brand-mark" />
+              )}
               <span className="banner-live">
                 <span className="live-dot" />
                 LIVE BRACKET

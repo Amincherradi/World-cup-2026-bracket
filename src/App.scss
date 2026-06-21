@@ -36,6 +36,12 @@ $danger: #bf3337; // tomato-jam — live / eliminated
     margin: 0;
   }
 
+  // BracketLive wordmark: the "Live" half picks up the marine accent.
+  .wordmark {
+    font-weight: 800;
+    .wm-live { color: $accent; }
+  }
+
   .actions {
     flex: 1; // right third
     justify-content: flex-end;
@@ -810,6 +816,13 @@ $danger: #bf3337; // tomato-jam — live / eliminated
   height: auto;
   pointer-events: none;
   user-select: none;
+}
+
+// BracketLive bracket-glyph logo (neutral, no FIFA IP): marine lines, tomato
+// "champion" node echoing the LIVE colour.
+.brand-mark {
+  color: $accent;
+  .node { fill: $danger; }
 }
 
 // Zeta logo fused in as a background, with the credits overlaid on its lower
