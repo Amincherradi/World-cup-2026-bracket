@@ -4,7 +4,7 @@
 // hand-entered snapshot in data.js when no API key is configured or a fetch
 // fails, so the app always renders something sensible.
 
-import { GROUPS, BRACKET, LIVE_QUALIFIED, LIVE_ELIMINATED, STRENGTH } from './data';
+import { GROUPS, BRACKET, TEAMS_BY_ID, LIVE_QUALIFIED, LIVE_ELIMINATED, STRENGTH } from './data';
 
 const API_KEY = import.meta.env.VITE_API_FOOTBALL_KEY;
 const BASE = 'https://v3.football.api-sports.io';
@@ -19,6 +19,10 @@ const OPENFOOTBALL_URL =
 // How often to re-poll while the app is open (ms). API-Football's free tier is
 // 100 requests/day, so don't go below a couple of minutes.
 export const POLL_MS = 3 * 60 * 1000;
+
+// In-progress matches change minute-by-minute, so poll them more often than the
+// full standings. Still gentle on API-Football's free quota.
+export const LIVE_POLL_MS = 45 * 1000;
 
 // Live data is always available now (openfootball needs no key); a key just
 // upgrades the source to API-Football.
@@ -99,8 +103,16 @@ async function fetchFixturesApiFootball() {
   });
   if (!res.ok) throw new Error(`API-Football ${res.status}`);
   const json = await res.json();
+  // API-Football returns HTTP 200 with an `errors` object for plan/quota issues
+  // (e.g. the free plan has no access to season 2026) — treat that as a failure
+  // so we fall back to openfootball instead of rendering an empty bracket.
+  if (json?.errors && Object.keys(json.errors).length) {
+    throw new Error(`API-Football: ${JSON.stringify(json.errors)}`);
+  }
   const fixtures = json?.response;
-  if (!Array.isArray(fixtures)) throw new Error('Unexpected fixtures shape');
+  if (!Array.isArray(fixtures) || fixtures.length === 0) {
+    throw new Error('API-Football returned no fixtures');
+  }
   return fixtures.map((f) => {
     const round = f.league?.round ?? ''; // e.g. "Group A - 1"
     const gm = /group\s+([a-l])/i.exec(round);
@@ -112,6 +124,152 @@ async function fetchFixturesApiFootball() {
       ft: finished ? [f.goals?.home ?? 0, f.goals?.away ?? 0] : null,
     };
   });
+}
+
+// ----- Currently-live matches (score + minute, Google-style) -----
+// Source order: API-Football (if a paid key) -> football-data.org (free, via
+// the /api/live proxy) -> [] (openfootball has no in-play data). Each entry
+// resolves teams to our internal ids so the UI can show the right flags.
+//
+// Returns: [{ id, homeId, awayId, home, away, code1, code2, gh, ga, minute,
+//             status, live }]  — minute is a display string ("57'", "HT", ...).
+const LIVE_STATUSES = ['1H', '2H', 'ET', 'BT', 'P', 'HT', 'LIVE', 'INT', 'SUSP'];
+
+function liveMinute(status) {
+  const short = status?.short;
+  const elapsed = status?.elapsed;
+  if (short === 'HT') return 'HT';
+  if (short === 'P') return 'PEN';
+  if (short === 'BT') return 'ET';
+  if (elapsed != null) {
+    const extra = status?.extra;
+    return `${elapsed}${extra ? '+' + extra : ''}'`;
+  }
+  return 'LIVE';
+}
+
+export async function fetchLiveMatches() {
+  if (API_KEY) {
+    try {
+      const res = await fetch(`${BASE}/fixtures?league=${LEAGUE}&live=all`, {
+        headers: { 'x-apisports-key': API_KEY },
+      });
+      if (!res.ok) throw new Error(`API-Football ${res.status}`);
+      const json = await res.json();
+      if (json?.errors && Object.keys(json.errors).length) {
+        throw new Error(`API-Football: ${JSON.stringify(json.errors)}`);
+      }
+      const fixtures = Array.isArray(json?.response) ? json.response : [];
+      return fixtures
+        .filter((f) => LIVE_STATUSES.includes(f.fixture?.status?.short))
+        .map((f) => {
+          const homeId = resolveId(f.teams?.home?.name);
+          const awayId = resolveId(f.teams?.away?.name);
+          return {
+            id: f.fixture?.id,
+            homeId,
+            awayId,
+            home: TEAMS_BY_ID[homeId]?.name ?? f.teams?.home?.name,
+            away: TEAMS_BY_ID[awayId]?.name ?? f.teams?.away?.name,
+            code1: TEAMS_BY_ID[homeId]?.code ?? null,
+            code2: TEAMS_BY_ID[awayId]?.code ?? null,
+            gh: f.goals?.home ?? 0,
+            ga: f.goals?.away ?? 0,
+            minute: liveMinute(f.fixture?.status),
+            status: f.fixture?.status?.short,
+            live: true,
+          };
+        });
+    } catch (err) {
+      console.warn('[liveData] API-Football live unavailable, trying football-data:', err.message);
+    }
+  }
+  // Free path: football-data.org via our proxy.
+  try {
+    return liveFromFootballData(await fetchFootballDataMatches());
+  } catch (err) {
+    console.warn('[liveData] live matches unavailable:', err.message);
+    return [];
+  }
+}
+
+// ----- football-data.org (free, via our /api/live proxy) -----
+// One proxy round-trip returns every World Cup match; we derive both the full
+// fixture list (for the bracket) and the in-play matches (for the live cards)
+// from it. football-data statuses: SCHEDULED/TIMED (upcoming), IN_PLAY, PAUSED
+// (half-time), FINISHED.
+const FD_LIVE_STATUSES = ['IN_PLAY', 'PAUSED'];
+
+async function fetchFootballDataMatches() {
+  const res = await fetch('/api/live');
+  if (!res.ok) throw new Error(`proxy ${res.status}`);
+  const json = await res.json();
+  if (json?.error) throw new Error(`football-data: ${json.error}`);
+  const matches = json?.matches;
+  if (!Array.isArray(matches) || matches.length === 0) {
+    throw new Error('football-data returned no matches');
+  }
+  return matches;
+}
+
+// football-data match -> our normalised fixture shape.
+function fixturesFromFootballData(matches) {
+  return matches.map((m) => {
+    // group is e.g. "GROUP_A"; pull the trailing letter.
+    const gm = /([a-l])\s*$/i.exec(m.group || '');
+    const finished = m.status === 'FINISHED';
+    return {
+      group: gm ? gm[1].toUpperCase() : null,
+      team1: m.homeTeam?.name,
+      team2: m.awayTeam?.name,
+      ft: finished
+        ? [m.score?.fullTime?.home ?? 0, m.score?.fullTime?.away ?? 0]
+        : null,
+    };
+  });
+}
+
+// The free football-data tier omits the live `minute`, so estimate it from the
+// kickoff time. Rough by design: assumes a 15-min half-time break and caps at
+// 90+. Used only as a fallback when the API doesn't supply a real minute.
+function estimateMinute(utcDate) {
+  if (!utcDate) return 'LIVE';
+  const mins = Math.floor((Date.now() - new Date(utcDate).getTime()) / 60000);
+  if (mins < 0) return 'LIVE';
+  if (mins <= 45) return `${Math.max(1, mins)}'`;
+  if (mins <= 60) return 'HT'; // likely the break (or 45'+ stoppage)
+  const second = mins - 15; // discount the half-time break
+  return second >= 90 ? "90+'" : `${second}'`;
+}
+
+// football-data in-play matches -> live-card shape (same as fetchLiveMatches).
+function liveFromFootballData(matches) {
+  return matches
+    .filter((m) => FD_LIVE_STATUSES.includes(m.status))
+    .map((m) => {
+      const homeId = resolveId(m.homeTeam?.name);
+      const awayId = resolveId(m.awayTeam?.name);
+      const minute =
+        m.status === 'PAUSED'
+          ? 'HT'
+          : m.minute != null
+          ? `${m.minute}${m.injuryTime ? '+' + m.injuryTime : ''}'`
+          : estimateMinute(m.utcDate);
+      return {
+        id: m.id,
+        homeId,
+        awayId,
+        home: TEAMS_BY_ID[homeId]?.name ?? m.homeTeam?.name,
+        away: TEAMS_BY_ID[awayId]?.name ?? m.awayTeam?.name,
+        code1: TEAMS_BY_ID[homeId]?.code ?? null,
+        code2: TEAMS_BY_ID[awayId]?.code ?? null,
+        gh: m.score?.fullTime?.home ?? 0,
+        ga: m.score?.fullTime?.away ?? 0,
+        minute,
+        status: m.status,
+        live: true,
+      };
+    });
 }
 
 // ----- Standings & qualification logic -----
@@ -273,15 +431,27 @@ function buildSnapshot(fixtures) {
   return { assignments, eliminated, groupOrder: projectGroupOrder(groups) };
 }
 
-// Returns { assignments, eliminated } from the live feed, or the static
-// fallback snapshot if the fetch fails.
+// Returns { assignments, eliminated, groupOrder } from the best available
+// source. Order of preference: API-Football (if a working paid key) ->
+// football-data.org (free token, via the /api/live proxy) -> openfootball
+// (keyless, results only) -> the static snapshot. Note: API-Football's *free*
+// plan has no access to season 2026, so a free key fails and we fall through.
 export async function fetchLive() {
+  if (API_KEY) {
+    try {
+      return buildSnapshot(await fetchFixturesApiFootball());
+    } catch (err) {
+      console.warn('[liveData] API-Football unavailable, falling back to football-data:', err.message);
+    }
+  }
+  // Free path: football-data.org via our /api/live proxy.
   try {
-    // A key upgrades to API-Football; otherwise use the keyless openfootball feed.
-    const fixtures = API_KEY
-      ? await fetchFixturesApiFootball()
-      : await fetchFixturesOpenFootball();
-    return buildSnapshot(fixtures);
+    return buildSnapshot(fixturesFromFootballData(await fetchFootballDataMatches()));
+  } catch (err) {
+    console.warn('[liveData] football-data unavailable, falling back to openfootball:', err.message);
+  }
+  try {
+    return buildSnapshot(await fetchFixturesOpenFootball());
   } catch (err) {
     console.warn('[liveData] live fetch failed, using static snapshot:', err);
     // No groupOrder -> Predict falls back to the static group listing order.

@@ -7,9 +7,10 @@ import {
   predictBracket,
   LIVE_ELIMINATED,
 } from './data';
-import { fetchLive, POLL_MS } from './liveData';
+import { fetchLive, fetchLiveMatches, POLL_MS, LIVE_POLL_MS } from './liveData';
 import GroupCard from './components/GroupCard';
 import Slot from './components/Slot';
+import LiveMatches from './components/LiveMatches';
 import emblem from './assets/2026_FIFA_World_Cup_emblem.svg.webp';
 import { Analytics } from '@vercel/analytics/react';
 import './App.scss';
@@ -54,6 +55,9 @@ export default function App() {
 
   // Really-eliminated teams from the live feed (static set as the initial value).
   const [liveEliminated, setLiveEliminated] = useState(() => new Set(LIVE_ELIMINATED));
+
+  // Matches currently in progress (score + minute), shown in the header.
+  const [liveMatches, setLiveMatches] = useState([]);
 
   // Latest live snapshot, so "Reset to live" reflects the most recent fetch.
   const liveSnapshot = useRef({
@@ -104,7 +108,31 @@ export default function App() {
     };
   }, []);
 
+  // Poll the in-progress matches on a faster cadence so the minute/score stay
+  // fresh while a game is live.
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      const matches = await fetchLiveMatches();
+      if (!cancelled) setLiveMatches(matches);
+    };
+    refresh();
+    const timer = setInterval(refresh, LIVE_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
   const usedTeamIds = new Set(Object.values(assignments));
+
+  // teamId -> { score, minute } for teams currently playing, so group cards can
+  // flag the live team and show its running score.
+  const liveByTeam = {};
+  for (const m of liveMatches) {
+    if (m.homeId) liveByTeam[m.homeId] = { score: `${m.gh}-${m.ga}`, minute: m.minute };
+    if (m.awayId) liveByTeam[m.awayId] = { score: `${m.ga}-${m.gh}`, minute: m.minute };
+  }
 
   // Shown as "OUT": really eliminated teams + teams a prediction left out.
   const eliminatedIds = new Set([...liveEliminated, ...predictedOut]);
@@ -242,11 +270,8 @@ export default function App() {
         <h1>World Cup 2026</h1>
         <div className="banner">
           <h2>BRACKET</h2>
-          <span className="banner-live">
-            <span className="live-dot" />
-            LIVE
-          </span>
         </div>
+        <LiveMatches matches={liveMatches} />
         <div className="actions">
           <span className="predict-note">
             <strong>Predict</strong> uses worldwide community current probabilities — not my own picks.
@@ -275,6 +300,7 @@ export default function App() {
             selectedTeamId={selected}
             onSelectTeam={handleSelectTeam}
             onDragStart={handleGroupDragStart}
+            liveByTeam={liveByTeam}
           />
         ))}
       </div>
@@ -297,7 +323,13 @@ export default function App() {
           </div>
 
           <div className="center">
-            <img className="emblem" src={emblem} alt="FIFA World Cup 2026 emblem" />
+            <div className="emblem-wrap">
+              <img className="emblem" src={emblem} alt="FIFA World Cup 2026 emblem" />
+              <span className="banner-live">
+                <span className="live-dot" />
+                LIVE
+              </span>
+            </div>
             <div className="final-row">
               <Slot
                 slot={BRACKET.final[0]}
@@ -347,6 +379,7 @@ export default function App() {
             selectedTeamId={selected}
             onSelectTeam={handleSelectTeam}
             onDragStart={handleGroupDragStart}
+            liveByTeam={liveByTeam}
           />
         ))}
       </div>
