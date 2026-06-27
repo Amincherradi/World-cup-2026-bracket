@@ -8,11 +8,19 @@ export default function GroupCard({
   eliminatedIds,
   selectedTeamId,
   onSelectTeam,
+  onOpenStandings,
   liveByTeam,
 }) {
   return (
     <div className="group-card">
-      <div className="group-title">GRUPO {group.id}</div>
+      <button
+        type="button"
+        className="group-title"
+        onClick={() => onOpenStandings?.(group.id)}
+        title={`View Group ${group.id} standings`}
+      >
+        GRUPO {group.id}
+      </button>
       <div className="group-flags">
         {group.teams.map((team) => {
           const eliminated = eliminatedIds?.has(team.id);

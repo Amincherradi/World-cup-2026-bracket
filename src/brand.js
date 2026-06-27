@@ -5,7 +5,7 @@
 //
 // IMPORTANT: keep this false for any public/commercial deployment. The official
 // 2026 emblem and "FIFA World Cup" name are protected marks.
-export const OFFICIAL_BRANDING = false;
+export const OFFICIAL_BRANDING = true;
 
 export const BRAND = {
   // Top-left product name.

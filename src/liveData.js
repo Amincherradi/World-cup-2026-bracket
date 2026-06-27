@@ -319,18 +319,21 @@ export async function fetchUpcomingMatches() {
 
 // ----- Standings & qualification logic -----
 
-// Points/GD/GF table for a set of played results within one group.
+// Points/GD/GF table for a set of played results within one group. Also tracks
+// wins/draws/losses so the standings modal can show a full league-table row.
 function tableFor(teams, played) {
-  const T = Object.fromEntries(teams.map((t) => [t, { name: t, pts: 0, gf: 0, ga: 0, played: 0 }]));
+  const T = Object.fromEntries(
+    teams.map((t) => [t, { name: t, pts: 0, gf: 0, ga: 0, played: 0, w: 0, d: 0, l: 0 }])
+  );
   for (const r of played) {
     const a = T[r.a];
     const b = T[r.b];
     a.played++; b.played++;
     a.gf += r.ga; a.ga += r.gb;
     b.gf += r.gb; b.ga += r.ga;
-    if (r.ga > r.gb) a.pts += 3;
-    else if (r.gb > r.ga) b.pts += 3;
-    else { a.pts++; b.pts++; }
+    if (r.ga > r.gb) { a.pts += 3; a.w++; b.l++; }
+    else if (r.gb > r.ga) { b.pts += 3; b.w++; a.l++; }
+    else { a.pts++; b.pts++; a.d++; b.d++; }
   }
   return Object.values(T)
     .map((t) => ({ ...t, gd: t.gf - t.ga }))
@@ -438,12 +441,33 @@ function buildSnapshot(fixtures) {
   const assignments = {};
   const eliminated = new Set();
   const thirds = [];
+  // 3rd-placed team of every group (decorated), for the modal's cross-group
+  // "best 3rds" ranking — separate from `thirds`, which drives bracket slots.
+  const thirdRanking = [];
+  // Full league tables per group letter, for the standings modal. Each row keeps
+  // the resolved internal id + flag code so the UI can render flags + names.
+  const standings = {};
   const allComplete = Object.values(groups).every((g) => g.remaining.length === 0)
     && Object.keys(groups).length === 12;
 
   for (const [letter, g] of Object.entries(groups)) {
     const teams = [...g.teams];
     const table = tableFor(teams, g.played);
+
+    // Build the display table for this group (decorated with id/code).
+    standings[letter] = table.map((row) => {
+      const id = resolveId(row.name);
+      return {
+        ...row,
+        id,
+        code: TEAMS_BY_ID[id]?.code ?? null,
+        name: TEAMS_BY_ID[id]?.name ?? row.name,
+      };
+    });
+    // Track the 3rd-placed team of every group for the cross-group ranking,
+    // regardless of whether the group has finished yet.
+    const third = standings[letter][2];
+    if (third) thirdRanking.push({ ...third, letter });
 
     if (g.remaining.length === 0) {
       // Group finished: ranks are final.
@@ -473,7 +497,17 @@ function buildSnapshot(fixtures) {
     for (const t of thirds.slice(8)) eliminated.add(t.id);
   }
 
-  return { assignments, eliminated, groupOrder: projectGroupOrder(groups) };
+  // Rank every group's 3rd-placed team against each other (FIFA tiebreakers:
+  // points, then goal difference, then goals for). Top 8 qualify.
+  thirdRanking.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+
+  return {
+    assignments,
+    eliminated,
+    groupOrder: projectGroupOrder(groups),
+    standings,
+    thirdRanking,
+  };
 }
 
 // Returns { assignments, eliminated, groupOrder } from the best available
@@ -500,6 +534,11 @@ export async function fetchLive() {
   } catch (err) {
     console.warn('[liveData] live fetch failed, using static snapshot:', err);
     // No groupOrder -> Predict falls back to the static group listing order.
-    return { assignments: { ...LIVE_QUALIFIED }, eliminated: new Set(LIVE_ELIMINATED) };
+    return {
+      assignments: { ...LIVE_QUALIFIED },
+      eliminated: new Set(LIVE_ELIMINATED),
+      standings: {},
+      thirdRanking: [],
+    };
   }
 }

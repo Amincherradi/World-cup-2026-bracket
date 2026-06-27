@@ -9,6 +9,7 @@ import {
 } from './data';
 import { fetchLive, fetchLiveMatches, fetchUpcomingMatches, POLL_MS, LIVE_POLL_MS } from './liveData';
 import GroupCard from './components/GroupCard';
+import StandingsModal from './components/StandingsModal';
 import Slot from './components/Slot';
 import LiveMatches from './components/LiveMatches';
 import UpcomingMarquee from './components/UpcomingMarquee';
@@ -75,6 +76,14 @@ export default function App() {
   // Brief hint when Share is tapped with no champion picked yet.
   const [shareHint, setShareHint] = useState(false);
 
+  // Live group standings tables + cross-group best-3rds ranking, for the modal.
+  const [standings, setStandings] = useState({});
+  const [thirdRanking, setThirdRanking] = useState([]);
+
+  // Standings modal: null when closed, otherwise the view to show — a group
+  // letter ('A'..'L') or 'thirds' for the best-3rds ranking.
+  const [standingsView, setStandingsView] = useState(null);
+
   // Latest live snapshot, so "Reset to live" reflects the most recent fetch.
   const liveSnapshot = useRef({
     assignments: getInitialAssignments(),
@@ -114,6 +123,8 @@ export default function App() {
       if (cancelled) return;
       liveSnapshot.current = snap;
       setLiveEliminated(snap.eliminated);
+      setStandings(snap.standings ?? {});
+      setThirdRanking(snap.thirdRanking ?? []);
       if (!userEdited.current) setAssignments(snap.assignments);
     };
     refresh();
@@ -299,19 +310,29 @@ export default function App() {
     ));
 
   return (
-    <div className={`app${EMBED ? ' embed' : ''}`}>
+    <div className={`app${EMBED ? ' embed' : ''}${standingsView ? ' modal-open' : ''}`}>
       <header className="topbar">
-        <h1 className="wordmark">
-          {OFFICIAL_BRANDING ? (
-            BRAND.name
-          ) : (
-            <>
-              Bracket<span className="wm-live">Live</span>
-            </>
-          )}
-        </h1>
+        <div className="topbar-left">
+          <h1 className="wordmark">
+            {OFFICIAL_BRANDING ? (
+              BRAND.name
+            ) : (
+              <>
+                Bracket<span className="wm-live">Live</span>
+              </>
+            )}
+          </h1>
+          <h2 className="banner-title">BRACKET</h2>
+        </div>
         <div className="banner">
-          <h2>BRACKET</h2>
+          <button
+            type="button"
+            className="best-thirds-btn"
+            onClick={() => setStandingsView('thirds')}
+          >
+            <i className="fa-solid fa-ranking-star bt-icon" aria-hidden="true" />
+            <span className="bt-label">Best 3rds</span>
+          </button>
         </div>
         {SHOW_CONTROLS && (
           <div className="actions">
@@ -354,6 +375,7 @@ export default function App() {
             eliminatedIds={eliminatedIds}
             selectedTeamId={selected}
             onSelectTeam={handleSelectTeam}
+            onOpenStandings={setStandingsView}
             onDragStart={handleGroupDragStart}
             liveByTeam={liveByTeam}
           />
@@ -439,6 +461,7 @@ export default function App() {
             eliminatedIds={eliminatedIds}
             selectedTeamId={selected}
             onSelectTeam={handleSelectTeam}
+            onOpenStandings={setStandingsView}
             onDragStart={handleGroupDragStart}
             liveByTeam={liveByTeam}
           />
@@ -469,6 +492,15 @@ export default function App() {
         <div className="tap-hint" role="status">
           Pick a champion first — hit <strong>Predict</strong> or fill the final, then Share.
         </div>
+      )}
+
+      {standingsView && (
+        <StandingsModal
+          standings={standings}
+          thirdRanking={thirdRanking}
+          initialView={standingsView}
+          onClose={() => setStandingsView(null)}
+        />
       )}
 
       <Analytics />
