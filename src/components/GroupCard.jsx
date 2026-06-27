@@ -19,7 +19,8 @@ export default function GroupCard({
         onClick={() => onOpenStandings?.(group.id)}
         title={`View Group ${group.id} standings`}
       >
-        GRUPO {group.id}
+        <span>GROUP {group.id}</span>
+        <i className="fa-solid fa-table-list group-title-icon" aria-hidden="true" />
       </button>
       <div className="group-flags">
         {group.teams.map((team) => {
