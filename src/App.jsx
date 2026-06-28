@@ -7,6 +7,8 @@ import {
   LIVE_ELIMINATED,
 } from './data';
 import { fetchLive, fetchLiveMatches, fetchUpcomingMatches, POLL_MS, LIVE_POLL_MS } from './liveData';
+// fetchUpcomingMatches is now driven by the live-snapshot poll (it needs the
+// resolved bracket assignments), not the fast in-play poll.
 import GroupCard from './components/GroupCard';
 import StandingsModal from './components/StandingsModal';
 import Slot from './components/Slot';
@@ -125,6 +127,11 @@ export default function App() {
       setStandings(snap.standings ?? {});
       setThirdRanking(snap.thirdRanking ?? []);
       if (!userEdited.current) setAssignments(snap.assignments);
+      // Marquee shows all 16 R32 matchups from the live bracket (regardless of
+      // any user edits), dated from the schedule feed.
+      fetchUpcomingMatches(snap.assignments).then((next) => {
+        if (!cancelled) setUpcoming(next);
+      });
     };
     refresh();
     const timer = setInterval(refresh, POLL_MS);
@@ -139,13 +146,9 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     const refresh = async () => {
-      const [matches, next] = await Promise.all([
-        fetchLiveMatches(),
-        fetchUpcomingMatches(),
-      ]);
+      const matches = await fetchLiveMatches();
       if (cancelled) return;
       setLiveMatches(matches);
-      setUpcoming(next);
     };
     refresh();
     const timer = setInterval(refresh, LIVE_POLL_MS);

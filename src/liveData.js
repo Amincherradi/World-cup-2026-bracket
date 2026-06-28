@@ -282,35 +282,93 @@ function liveFromFootballData(matches) {
     });
 }
 
-// football-data upcoming matches -> compact "next up" shape, soonest first.
-const FD_UPCOMING_STATUSES = ['TIMED', 'SCHEDULED'];
-function upcomingFromFootballData(matches, limit = 16) {
-  return matches
-    .filter((m) => FD_UPCOMING_STATUSES.includes(m.status) && m.utcDate)
-    .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))
-    .slice(0, limit)
-    .map((m) => {
-      const homeId = resolveId(m.homeTeam?.name);
-      const awayId = resolveId(m.awayTeam?.name);
-      const gm = /([a-l])\s*$/i.exec(m.group || '');
-      return {
-        id: m.id,
-        home: TEAMS_BY_ID[homeId]?.name ?? m.homeTeam?.name,
-        away: TEAMS_BY_ID[awayId]?.name ?? m.awayTeam?.name,
-        code1: TEAMS_BY_ID[homeId]?.code ?? null,
-        code2: TEAMS_BY_ID[awayId]?.code ?? null,
-        utcDate: m.utcDate,
-        group: gm ? gm[1].toUpperCase() : null,
-      };
-    });
+// ----- Round-of-32 "next up" marquee -----
+// The marquee shows ALL 16 knockout matchups. We already know every matchup
+// from the resolved bracket (`assignments`), so the only thing we need from the
+// feed is each match's kickoff time. openfootball is used as the schedule source
+// because it's keyless (works in dev too) and lists each R32 fixture with our
+// own slot-label placeholders ("1I", "3A/B/C/D/F") plus real teams once known.
+
+// Raw openfootball matches (date/time/round/team labels preserved, unlike
+// fetchFixturesOpenFootball which normalises to the group-fixture shape).
+async function fetchOpenFootballRaw() {
+  const res = await fetch(OPENFOOTBALL_URL);
+  if (!res.ok) throw new Error(`openfootball ${res.status}`);
+  const json = await res.json();
+  if (!Array.isArray(json?.matches)) throw new Error('Unexpected openfootball shape');
+  return json.matches;
 }
 
-// Upcoming fixtures for the header marquee. Only the free football-data source
-// is wired here (the live cards already cover the API-Football path); returns []
-// if unavailable so the marquee simply doesn't render.
-export async function fetchUpcomingMatches() {
+// Resolve one side of a fixture to an R32 slot id. Handles slot-label
+// placeholders ("1I", "2K", "3A/B/C/D/F") and real team names (mapped to the
+// slot they occupy in the resolved bracket via `invAssign`).
+function sideToSlotId(side, invAssign) {
+  if (side == null) return null;
+  const s = String(side).trim();
+  if (/^[12][A-L]$/i.test(s)) return SLOT_BY_LABEL[s.toUpperCase()] ?? null;
+  const m = /^3[\s]*([A-L/\s]+)$/i.exec(s);
+  if (m) {
+    const letters = m[1].replace(/[^A-Za-z]/g, '').toUpperCase().split('').sort().join('');
+    return SLOT_BY_LABEL[`3 ${letters}`] ?? null;
+  }
+  const id = resolveId(s);
+  return id ? invAssign[id] ?? null : null;
+}
+
+// openfootball date ("2026-06-28") + time ("12:00 UTC-7") -> ISO UTC string.
+function openFootballDateToISO(date, time) {
+  if (!date) return null;
+  const m = /^(\d{1,2}):(\d{2})\s*UTC([+-]\d{1,2})(?::?(\d{2}))?/i.exec(time || '');
+  if (!m) return new Date(`${date}T12:00:00Z`).toISOString();
+  const sign = m[3][0];
+  const hh = String(Math.abs(parseInt(m[3], 10))).padStart(2, '0');
+  const mm = (m[4] || '00').padStart(2, '0');
+  const d = new Date(`${date}T${m[1].padStart(2, '0')}:${m[2]}:00${sign}${hh}:${mm}`);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+// Build the full 16-match R32 marquee list from the resolved bracket
+// (`assignments`) + openfootball's schedule, soonest kickoff first.
+function r32ScheduleFrom(rawMatches, assignments) {
+  // teamId -> R32 slot id, from the resolved bracket.
+  const invAssign = {};
+  for (const s of R32_SLOTS) {
+    const id = assignments[s.id];
+    if (id) invAssign[id] = s.id;
+  }
+  const out = [];
+  const seen = new Set();
+  for (const m of rawMatches) {
+    if (!/round of 32/i.test(m.round || '')) continue;
+    const slotA = sideToSlotId(m.team1, invAssign);
+    const slotB = sideToSlotId(m.team2, invAssign);
+    if (!slotA || !slotB) continue;
+    const aId = assignments[slotA];
+    const bId = assignments[slotB];
+    if (!aId || !bId) continue; // matchup not fully decided in our bracket yet
+    const key = [slotA, slotB].sort().join('|');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      id: `r32-${key}`,
+      home: TEAMS_BY_ID[aId]?.name ?? aId,
+      away: TEAMS_BY_ID[bId]?.name ?? bId,
+      code1: TEAMS_BY_ID[aId]?.code ?? null,
+      code2: TEAMS_BY_ID[bId]?.code ?? null,
+      utcDate: openFootballDateToISO(m.date, m.time),
+    });
+  }
+  return out.sort((a, b) =>
+    a.utcDate && b.utcDate ? new Date(a.utcDate) - new Date(b.utcDate) : 0
+  );
+}
+
+// Upcoming fixtures for the header marquee: all 16 Round-of-32 matchups from the
+// resolved bracket, dated from openfootball. Returns [] if unavailable so the
+// marquee simply doesn't render. `assignments` is the live bracket (slot -> team).
+export async function fetchUpcomingMatches(assignments = {}) {
   try {
-    return upcomingFromFootballData(await fetchFootballDataMatches());
+    return r32ScheduleFrom(await fetchOpenFootballRaw(), assignments);
   } catch (err) {
     console.warn('[liveData] upcoming matches unavailable:', err.message);
     return [];

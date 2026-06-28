@@ -2,7 +2,9 @@ import Flag from './Flag';
 
 // Short kickoff label, e.g. "Sat 19:00" or "Jun 22 19:00" if it's not today.
 function kickoffLabel(utcDate) {
+  if (!utcDate) return '';
   const d = new Date(utcDate);
+  if (Number.isNaN(d.getTime())) return '';
   const now = new Date();
   const sameDay = d.toDateString() === now.toDateString();
   const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
