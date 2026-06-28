@@ -80,8 +80,9 @@ const THIRD_SLOTS = R32_SLOTS.filter((s) => s.label.startsWith('3 ')).map((s) =>
 
 // ----- Fetch -----
 // Both sources are normalised to the same fixture shape:
-//   { group: 'A'|null, team1, team2, ft: [g1, g2] | null }
-// group is null for knockout matches; ft is null for unplayed fixtures.
+//   { group: 'A'|null, team1, team2, ft: [g1, g2] | null, pen: [p1, p2] | null }
+// group is null for knockout matches; ft is null for unplayed fixtures; pen is
+// the penalty-shootout score for a knockout decided on penalties (else null).
 
 async function fetchFixturesOpenFootball() {
   const res = await fetch(OPENFOOTBALL_URL);
@@ -94,6 +95,7 @@ async function fetchFixturesOpenFootball() {
     team1: m.team1,
     team2: m.team2,
     ft: Array.isArray(m.score?.ft) ? m.score.ft : null,
+    pen: Array.isArray(m.score?.p) ? m.score.p : null,
   }));
 }
 
@@ -122,6 +124,10 @@ async function fetchFixturesApiFootball() {
       team1: f.teams?.home?.name,
       team2: f.teams?.away?.name,
       ft: finished ? [f.goals?.home ?? 0, f.goals?.away ?? 0] : null,
+      pen:
+        f.score?.penalty?.home != null
+          ? [f.score.penalty.home, f.score.penalty.away]
+          : null,
     };
   });
 }
@@ -225,6 +231,10 @@ function fixturesFromFootballData(matches) {
       ft: finished
         ? [m.score?.fullTime?.home ?? 0, m.score?.fullTime?.away ?? 0]
         : null,
+      pen:
+        m.score?.penalties?.home != null
+          ? [m.score.penalties.home, m.score.penalties.away]
+          : null,
     };
   });
 }
@@ -489,6 +499,60 @@ function assignThirds(bestThirds, assignments) {
   }
 }
 
+// ----- Knockout advancement -----
+// Decide a knockout winner: full-time score, then penalties if drawn. Returns
+// the winning team id, or null if undecided (e.g. draw with no penalty data).
+function decideWinner(aId, bId, ft, pen) {
+  if (ft[0] > ft[1]) return aId;
+  if (ft[1] > ft[0]) return bId;
+  if (pen && pen[0] != null && pen[1] != null) {
+    if (pen[0] > pen[1]) return aId;
+    if (pen[1] > pen[0]) return bId;
+  }
+  return null;
+}
+
+const pairKey = (x, y) => [x, y].sort().join('|');
+
+// Walk the bracket tree filling in each later round from real knockout results.
+// `assignments` already holds the Round-of-32 slots (from group standings); for
+// every paired slot whose two teams have actually played a knockout match, the
+// winner is placed in the next round's slot (and the loser marked eliminated).
+// Purely team-based, so it needs no round labels from the feed.
+function advanceKnockouts(assignments, koResults, eliminated) {
+  const winnerByPair = new Map();
+  for (const r of koResults) winnerByPair.set(pairKey(r.aId, r.bId), r.winnerId);
+
+  const resolvePair = (aId, bId, destSlotId) => {
+    if (!aId || !bId) return;
+    const winnerId = winnerByPair.get(pairKey(aId, bId));
+    if (!winnerId) return;
+    assignments[destSlotId] = winnerId;
+    eliminated.add(winnerId === aId ? bId : aId);
+  };
+
+  // Within each half: r0->r1->r2->r3 (slots 2i/2i+1 feed next-round slot i).
+  for (const side of ['left', 'right']) {
+    const rounds = BRACKET[side];
+    for (let r = 0; r < rounds.length - 1; r++) {
+      const cur = rounds[r];
+      const next = rounds[r + 1];
+      for (let i = 0; i < next.length; i++) {
+        resolvePair(assignments[cur[2 * i].id], assignments[cur[2 * i + 1].id], next[i].id);
+      }
+    }
+  }
+
+  // Semi-finals: each half's two r3 slots play to fill a finalist slot.
+  const leftSF = BRACKET.left[BRACKET.left.length - 1];
+  const rightSF = BRACKET.right[BRACKET.right.length - 1];
+  resolvePair(assignments[leftSF[0].id], assignments[leftSF[1].id], BRACKET.final[0].id);
+  resolvePair(assignments[rightSF[0].id], assignments[rightSF[1].id], BRACKET.final[1].id);
+
+  // Final -> champion.
+  resolvePair(assignments[BRACKET.final[0].id], assignments[BRACKET.final[1].id], BRACKET.champion.id);
+}
+
 // Turn the full fixture list into bracket assignments + eliminated teams.
 // A team only appears in the bracket once its slot is genuinely decided:
 //  - group still in progress -> only teams that have clinched top 2, in their
@@ -564,6 +628,20 @@ function buildSnapshot(fixtures) {
     assignThirds(thirds.slice(0, 8), assignments);
     for (const t of thirds.slice(8)) eliminated.add(t.id);
   }
+
+  // Advance winners through the knockout tree from real results. Knockout games
+  // carry no group letter, so they were never bucketed above — pull them straight
+  // from the finished fixtures and resolve each decided matchup.
+  const koResults = [];
+  for (const f of fixtures) {
+    if (f.group || !f.team1 || !f.team2 || !f.ft) continue;
+    const aId = resolveId(f.team1);
+    const bId = resolveId(f.team2);
+    if (!aId || !bId) continue;
+    const winnerId = decideWinner(aId, bId, f.ft, f.pen);
+    if (winnerId) koResults.push({ aId, bId, winnerId });
+  }
+  if (koResults.length) advanceKnockouts(assignments, koResults, eliminated);
 
   // Rank every group's 3rd-placed team against each other (FIFA tiebreakers:
   // points, then goal difference, then goals for). Top 8 qualify.
