@@ -4,7 +4,6 @@ import {
   BRACKET,
   TEAMS_BY_ID,
   getInitialAssignments,
-  predictBracket,
   LIVE_ELIMINATED,
 } from './data';
 import { fetchLive, fetchLiveMatches, fetchUpcomingMatches, POLL_MS, LIVE_POLL_MS } from './liveData';
@@ -234,28 +233,6 @@ export default function App() {
     setPredictedOut(new Set());
     setSelected(null);
   };
-  const handlePredict = async () => {
-    userEdited.current = true;
-    // Pull the freshest results so the prediction reflects games just played,
-    // then project from them. Falls back to the last snapshot if the fetch hangs.
-    let snap = liveSnapshot.current;
-    try {
-      snap = await fetchLive();
-      liveSnapshot.current = snap;
-      setLiveEliminated(snap.eliminated);
-    } catch {
-      /* keep the last snapshot */
-    }
-    const result = predictBracket(snap.groupOrder);
-    const placed = new Set(Object.values(result));
-    // Teams that never appear in the predicted bracket are eliminated.
-    setPredictedOut(
-      new Set(Object.keys(TEAMS_BY_ID).filter((id) => !placed.has(id)))
-    );
-    setAssignments(result);
-    setSelected(null);
-  };
-
   // Export the current bracket as a shareable image. Nudge the user to fill the
   // final first if there's no champion yet.
   const handleShare = async () => {
@@ -336,14 +313,6 @@ export default function App() {
         </div>
         {SHOW_CONTROLS && (
           <div className="actions">
-            {!EMBED && (
-              <span className="predict-note">
-                <strong>Predict</strong> uses worldwide community current probabilities — not my own picks.
-              </span>
-            )}
-            <button type="button" className="reset-btn predict" onClick={handlePredict}>
-              Predict
-            </button>
             <button type="button" className="reset-btn share" onClick={handleShare}>
               Share
             </button>

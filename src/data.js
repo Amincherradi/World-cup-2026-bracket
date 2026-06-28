@@ -129,15 +129,15 @@ const R32_LEFT = [
   '1F', '2C',
   '2K', '2L',
   '1H', '2J',
-  '3 AEHIJ', '1G',
-  '3 CEFHI', '1A',
+  '1D', '3 BEFIJ',
+  '1G', '3 AEHIJ',
 ];
 
 const R32_RIGHT = [
   '1C', '2F',
   '2E', '2I',
+  '1A', '3 CEFHI',
   '1L', '3 EHIJK',
-  '1D', '3 BEFIJ',
   '1J', '2H',
   '2D', '2G',
   '1B', '3 EFGIJ',
@@ -177,13 +177,43 @@ export const BRACKET = {
   champion: { id: 'champion', label: 'CHAMPION' },
 };
 
+// ----- FIFA Annex C: official best-third allocation -----
+// Which "3 ..." Round-of-32 slot each qualifying third-placed team plays in
+// depends on *which* 8 of the 12 groups supply a qualifying third — FIFA
+// publishes all 495 combinations in Annex C of the tournament regulations. A
+// greedy "most-constrained-slot-first" placement produces a *valid* bracket but
+// not necessarily FIFA's official one, so we encode the realized combinations
+// here and look them up first. Key: the 8 qualifying group letters, sorted and
+// joined. Value: group letter -> the slot label that group's third plays in.
+export const THIRD_PLACE_TABLE = {
+  // 2026 tournament — thirds from B, D, E, F, I, J, K, L qualified.
+  BDEFIJKL: {
+    D: '3 ABCDF', // 3D -> vs 1E
+    F: '3 CDFGH', // 3F -> vs 1I
+    B: '3 BEFIJ', // 3B -> vs 1D
+    I: '3 AEHIJ', // 3I -> vs 1G
+    E: '3 CEFHI', // 3E -> vs 1A
+    K: '3 EHIJK', // 3K -> vs 1L
+    J: '3 EFGIJ', // 3J -> vs 1B
+    L: '3 DEIJL', // 3L -> vs 1K
+  },
+};
+
+// Look up the official slot allocation for a set of qualifying third-place group
+// letters. Returns { groupLetter: slotLabel } or null if the combination isn't
+// in the table (caller should fall back to a greedy valid placement).
+export function thirdPlaceMapping(groupLetters) {
+  const key = [...new Set(groupLetters)].sort().join('');
+  return THIRD_PLACE_TABLE[key] ?? null;
+}
+
 // ----- Live snapshot from FIFA (updated 2026-06-20) -----
 // Group stage still in progress. Only Mexico and the United States (co-hosts)
 // have officially qualified for the Round of 32 so far. Placed in their group-
 // winner slots (1A / 1D). Re-run the lookup to refresh as more teams qualify.
 export const LIVE_QUALIFIED = {
-  'L-r0-s15': 'mex', // 1A — Mexico
-  'R-r0-s6': 'usa', // 1D — United States
+  'R-r0-s4': 'mex', // 1A — Mexico
+  'L-r0-s12': 'usa', // 1D — United States
 };
 
 export function getInitialAssignments() {
@@ -250,7 +280,7 @@ export function predictBracket(groupOrder) {
     } else {
       // "3 ABCDF" -> a best third-placed team from one of those groups
       const letters = label.replace(/[^A-L]/g, '').split('');
-      thirdSlots.push({ slotId: slot.id, letters });
+      thirdSlots.push({ slotId: slot.id, label, letters });
     }
   }
   // Best-third slots: take the 8 strongest projected third-placed teams across
@@ -263,23 +293,36 @@ export function predictBracket(groupOrder) {
     .sort((x, y) => eff(y.id) - eff(x.id))
     .slice(0, 8);
 
-  const pending = thirdSlots.map((s) => ({ ...s }));
-  const eligibleCount = (slot) =>
-    thirdPool.filter((c) => !usedThird.has(c.id) && slot.letters.includes(c.letter)).length;
-  while (pending.length) {
-    pending.sort((x, y) => eligibleCount(x) - eligibleCount(y));
-    const slot = pending.shift();
-    // Strongest eligible-and-unused team; fall back to any unused so the slot
-    // never ends up empty.
-    let pick = null;
+  // Prefer FIFA's official Annex C allocation when this exact set of 8 third-
+  // place groups is in the table; otherwise fall back to the greedy placement.
+  const official = thirdPlaceMapping(thirdPool.map((c) => c.letter));
+  if (official) {
     for (const c of thirdPool) {
-      if (usedThird.has(c.id)) continue;
-      if (slot.letters.includes(c.letter) && (!pick || eff(c.id) > eff(pick.id))) pick = c;
+      const slot = thirdSlots.find((s) => s.label === official[c.letter]);
+      if (slot) {
+        a[slot.slotId] = c.id;
+        usedThird.add(c.id);
+      }
     }
-    if (!pick) pick = thirdPool.find((c) => !usedThird.has(c.id)) ?? null;
-    if (pick) {
-      a[slot.slotId] = pick.id;
-      usedThird.add(pick.id);
+  } else {
+    const pending = thirdSlots.map((s) => ({ ...s }));
+    const eligibleCount = (slot) =>
+      thirdPool.filter((c) => !usedThird.has(c.id) && slot.letters.includes(c.letter)).length;
+    while (pending.length) {
+      pending.sort((x, y) => eligibleCount(x) - eligibleCount(y));
+      const slot = pending.shift();
+      // Strongest eligible-and-unused team; fall back to any unused so the slot
+      // never ends up empty.
+      let pick = null;
+      for (const c of thirdPool) {
+        if (usedThird.has(c.id)) continue;
+        if (slot.letters.includes(c.letter) && (!pick || eff(c.id) > eff(pick.id))) pick = c;
+      }
+      if (!pick) pick = thirdPool.find((c) => !usedThird.has(c.id)) ?? null;
+      if (pick) {
+        a[slot.slotId] = pick.id;
+        usedThird.add(pick.id);
+      }
     }
   }
 

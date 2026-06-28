@@ -4,7 +4,7 @@
 // hand-entered snapshot in data.js when no API key is configured or a fetch
 // fails, so the app always renders something sensible.
 
-import { GROUPS, BRACKET, TEAMS_BY_ID, LIVE_QUALIFIED, LIVE_ELIMINATED, STRENGTH } from './data';
+import { GROUPS, BRACKET, TEAMS_BY_ID, LIVE_QUALIFIED, LIVE_ELIMINATED, STRENGTH, thirdPlaceMapping } from './data';
 
 const API_KEY = import.meta.env.VITE_API_FOOTBALL_KEY;
 const BASE = 'https://v3.football.api-sports.io';
@@ -409,6 +409,16 @@ function projectGroupOrder(groups) {
 // constrained slot first — an approximation of FIFA's combination table that
 // always produces a valid (group-eligible) placement.
 function assignThirds(bestThirds, assignments) {
+  // Prefer FIFA's official Annex C allocation for this exact set of qualifying
+  // third-place groups; fall back to the greedy valid placement otherwise.
+  const official = thirdPlaceMapping(bestThirds.map((t) => t.letter));
+  if (official) {
+    for (const t of bestThirds) {
+      const slotId = SLOT_BY_LABEL[official[t.letter]];
+      if (slotId) assignments[slotId] = t.id;
+    }
+    return;
+  }
   const slots = THIRD_SLOTS.map((s) => ({ ...s }));
   const pool = [...bestThirds];
   const eligibleCount = (slot) => pool.filter((t) => slot.groups.includes(t.letter)).length;
