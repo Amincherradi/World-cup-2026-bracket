@@ -12,15 +12,19 @@ export default function Slot({
   onClear,
   onTap,
   selected,
+  eliminatedTeams,
 }) {
   const team = teamId ? TEAMS_BY_ID[teamId] : null;
   const isSelected = team && selected === teamId;
+  // Really-eliminated team: it's locked in place and can't be dragged/moved.
+  const isEliminated = team && eliminatedTeams?.has(teamId);
 
   return (
     <div
       className={
         `slot${team ? ' is-filled' : ''} slot-${side}` +
-        (isSelected ? ' is-selected' : '')
+        (isSelected ? ' is-selected' : '') +
+        (isEliminated ? ' is-eliminated' : '')
       }
       onDragOver={(e) => {
         e.preventDefault();
@@ -32,8 +36,8 @@ export default function Slot({
         e.currentTarget.classList.remove('drag-over');
         onDrop(e, slot.id);
       }}
-      draggable={!!team}
-      onDragStart={(e) => team && onDragStart(e, team.id, slot.id)}
+      draggable={!!team && !isEliminated}
+      onDragStart={(e) => team && !isEliminated && onDragStart(e, team.id, slot.id)}
       onClick={() => onTap?.(slot.id)}
     >
       {team ? (

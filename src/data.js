@@ -194,6 +194,30 @@ export const BRACKET = {
   champion: { id: 'champion', label: 'CHAMPION' },
 };
 
+// slotId -> the two feeder ("child") slot ids one round out. Round-of-32 entry
+// slots have no children. Used to validate moves: a team may only be placed in
+// an entry slot (from the groups) or advanced into a slot whose child already
+// holds it — so it follows a single path and can't be duplicated to the other
+// side of the bracket.
+export const SLOT_CHILDREN = (() => {
+  const map = {};
+  const halfChildren = (rounds) => {
+    for (let r = 1; r < rounds.length; r++) {
+      rounds[r].forEach((slot, i) => {
+        map[slot.id] = [rounds[r - 1][2 * i].id, rounds[r - 1][2 * i + 1].id];
+      });
+    }
+  };
+  halfChildren(BRACKET.left);
+  halfChildren(BRACKET.right);
+  const leftSF = BRACKET.left[BRACKET.left.length - 1];
+  const rightSF = BRACKET.right[BRACKET.right.length - 1];
+  map[BRACKET.final[0].id] = [leftSF[0].id, leftSF[1].id];
+  map[BRACKET.final[1].id] = [rightSF[0].id, rightSF[1].id];
+  map[BRACKET.champion.id] = [BRACKET.final[0].id, BRACKET.final[1].id];
+  return map;
+})();
+
 // ----- FIFA Annex C: official best-third allocation -----
 // Which "3 ..." Round-of-32 slot each qualifying third-placed team plays in
 // depends on *which* 8 of the 12 groups supply a qualifying third — FIFA

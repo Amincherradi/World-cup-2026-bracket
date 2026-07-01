@@ -6,6 +6,7 @@ import {
   TEAMS_BY_ID,
   getInitialAssignments,
   LIVE_ELIMINATED,
+  SLOT_CHILDREN,
 } from './data';
 import { fetchLive, fetchLiveMatches, fetchUpcomingMatches, POLL_MS, LIVE_POLL_MS } from './liveData';
 // fetchUpcomingMatches is now driven by the live-snapshot poll (it needs the
@@ -17,6 +18,7 @@ import LiveMatches from './components/LiveMatches';
 import UpcomingMarquee from './components/UpcomingMarquee';
 import BrandMark from './components/BrandMark';
 import RoundedBracket from './components/RoundedBracket';
+import RoundedFeed from './components/RoundedFeed';
 import { OFFICIAL_BRANDING, BRAND } from './brand';
 import emblem from './assets/2026_FIFA_World_Cup_emblem.svg.webp';
 import { Analytics } from '@vercel/analytics/react';
@@ -173,17 +175,50 @@ export default function App({ variant = 'linear' }) {
   // Shown as "OUT": really eliminated teams + teams a prediction left out.
   const eliminatedIds = new Set([...liveEliminated, ...predictedOut]);
 
+  // Once a team is really eliminated it's out — it can't be picked up or moved.
+  const isEliminated = (teamId) => teamId && liveEliminated.has(teamId);
+
+  // A team may only go into a Round-of-32 entry slot (from the groups) or be
+  // advanced into a slot whose feeder already holds it. This keeps every team on
+  // a single path and blocks duplicating it into the other half of the bracket.
+  const canPlaceTeam = (teamId, slotId) => {
+    if (!teamId || isEliminated(teamId)) return false;
+    if (assignments[slotId] === teamId) return false; // already there
+    const kids = SLOT_CHILDREN[slotId];
+    if (!kids) return true; // Round-of-32 entry slot
+    return kids.some((k) => assignments[k] === teamId);
+  };
+
+  // Place a team into a slot, keeping the single-path invariant: dropping into
+  // an entry slot re-seeds the team, so remove it from anywhere else first.
+  const placeTeam = (slotId, teamId) => {
+    userEdited.current = true;
+    setAssignments((prev) => {
+      const next = { ...prev };
+      if (!SLOT_CHILDREN[slotId]) {
+        for (const id of Object.keys(next)) {
+          if (next[id] === teamId) delete next[id];
+        }
+      }
+      next[slotId] = teamId;
+      return next;
+    });
+  };
+
   // Tap a flag in a group to pick it up / put it back down.
-  const handleSelectTeam = (teamId) =>
+  const handleSelectTeam = (teamId) => {
+    if (isEliminated(teamId)) return;
     setSelected((prev) => (prev === teamId ? null : teamId));
+  };
 
   // Tap a slot: place the picked-up team, or pick up the team already there.
   const handleSlotTap = (slotId) => {
     if (selected) {
-      userEdited.current = true;
-      setAssignments((prev) => ({ ...prev, [slotId]: selected }));
-      setSelected(null);
-    } else if (assignments[slotId]) {
+      if (canPlaceTeam(selected, slotId)) {
+        placeTeam(slotId, selected);
+        setSelected(null);
+      }
+    } else if (assignments[slotId] && !isEliminated(assignments[slotId])) {
       setSelected(assignments[slotId]);
     }
   };
@@ -197,6 +232,10 @@ export default function App({ variant = 'linear' }) {
 
   // Drag from a filled slot: carry teamId + origin slot so we can move it.
   const handleSlotDragStart = (e, teamId, fromSlot) => {
+    if (isEliminated(teamId)) {
+      e.preventDefault(); // eliminated teams can't be moved
+      return;
+    }
     e.dataTransfer.setData('teamId', teamId);
     e.dataTransfer.setData('fromSlot', fromSlot);
     e.dataTransfer.effectAllowed = 'copyMove';
@@ -205,15 +244,11 @@ export default function App({ variant = 'linear' }) {
   const handleDrop = (e, slotId) => {
     const teamId = e.dataTransfer.getData('teamId');
     if (!teamId) return;
-
-    userEdited.current = true;
-    setAssignments((prev) => ({
-      // Dropping a flag fills the target slot and leaves the source intact —
-      // advancing a team to the next round shouldn't empty its current round.
-      // Use the × button on a slot to clear it.
-      ...prev,
-      [slotId]: teamId,
-    }));
+    // Only allow entry placement or a valid advance from a feeder slot — this
+    // keeps the team on one path and prevents duplicating it elsewhere. The ×
+    // button on a slot clears it.
+    if (!canPlaceTeam(teamId, slotId)) return;
+    placeTeam(slotId, teamId);
   };
 
   const handleClear = (slotId) => {
@@ -257,6 +292,7 @@ export default function App({ variant = 'linear' }) {
     onClear: handleClear,
     onTap: handleSlotTap,
     selected,
+    eliminatedTeams: liveEliminated,
   };
 
   // Round-name header row for one half (mirrors the body's flex columns).
@@ -361,6 +397,11 @@ export default function App({ variant = 'linear' }) {
           />
         ))}
       </div>
+
+      {/* Vertical match feed (radial page only), between groups and bracket */}
+      {variant === 'rounded' && (
+        <RoundedFeed liveMatches={liveMatches} upcoming={upcoming} />
+      )}
 
       {/* Bracket — radial redesign on /rounded-bracket */}
       {variant === 'rounded' ? (
@@ -478,6 +519,9 @@ export default function App({ variant = 'linear' }) {
        </div>
       </main>
       )}
+
+      {/* Spacer mirroring the left feed column so the bracket stays centered */}
+      {variant === 'rounded' && <div className="rounded-feed-spacer" />}
 
       {/* Right groups G–L */}
       <div className="groups groups-side">
