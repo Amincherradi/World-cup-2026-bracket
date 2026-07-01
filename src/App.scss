@@ -1579,6 +1579,26 @@ a.credit:hover {
   flex-shrink: 0;
 }
 
+// Left column of the radial page: control toolbar stacked above the match feed,
+// so the buttons have their own space and never overlap the circle.
+.rounded-leftcol {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 184px;
+  flex-shrink: 0;
+}
+.rounded-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .reset-btn,
+  .best-thirds-btn {
+    width: 100%;
+  }
+}
+
 // Vertical feed. Cards reuse .group-card / .group-title so they're identical in
 // width, height, and styling to the group cards on either side.
 .rounded-feed {
@@ -1990,10 +2010,12 @@ a.credit:hover {
 // All-time top-scorers leaderboard, anchored in the empty space right of the
 // circle. Positioned in stage coords (inline left/top) so it scales with the
 // bracket; centred on its anchor point like the zeta logo.
+// Top-scorers card — anchored in the band right of the circle, in stage coords
+// so it scales with the circle. Centred on its anchor point (translate -50%).
 .rounded-scorers {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 330px;
+  width: 300px;
 }
 
 // ZETA logo sitting above the social bar / scorers card in the right column.
@@ -2231,5 +2253,91 @@ a.credit:hover {
 @media (max-width: 720px) {
   .bracket.rounded {
     padding: 12px 6px 28px;
+  }
+}
+
+// ============================================================================
+// Radial view — mobile/tablet reflow (≤1024px, matches MOBILE_Q in
+// RoundedBracket.jsx). The circle stays a scaled fixed canvas (now sized purely
+// by width so it fills the screen instead of collapsing), and the satellite
+// panels (action buttons + top-scorers card) plus the match feed are laid out
+// in normal flow so nothing hangs off-screen, overlaps, or squishes to a sliver.
+// ============================================================================
+@media (max-width: 1024px) {
+  // Never let the off-canvas circle math produce a sideways scrollbar.
+  .app.rounded-page { overflow-x: hidden; }
+
+  // The invisible desktop centering spacer serves no purpose when stacked.
+  .rounded-feed-spacer { display: none; }
+
+  // Left column goes full width; control buttons wrap into a centered row.
+  .rounded-leftcol { width: 100%; }
+  .rounded-controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+
+    .reset-btn,
+    .best-thirds-btn {
+      width: auto;
+      flex: 0 1 auto;
+    }
+  }
+
+  // Match feed: full-width horizontal strip (LIVE + NEXT UP side by side)
+  // instead of the fixed 184px vertical column that squished to a sliver.
+  .rounded-feed {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: stretch;
+    gap: 10px;
+
+    .feed-card {
+      flex: 1 1 240px;
+      max-width: 360px;
+      height: 150px;
+    }
+  }
+
+  // Stack: [actions] → [circle] → [scorers], each centered.
+  .bracket.rounded {
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  // Action buttons: one wrapping, centered row in normal flow (no corner
+  // overlays). Buttons size to content instead of the fixed desktop width.
+  .rounded-actions-mobile {
+    position: static;
+    width: 100%;
+    max-width: 520px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 auto;
+
+    .reset-btn,
+    .best-thirds-btn,
+    button,
+    .view-link {
+      width: auto;
+      min-width: 0;
+      flex: 0 1 auto;
+    }
+  }
+
+  // Keep the circle canvas from reserving extra side space.
+  .rounded-stage-wrap { width: 100%; }
+
+  // Top-scorers card: centered below the circle, full-ish width.
+  .rounded-scorers.rounded-scorers-mobile {
+    position: static;
+    transform: none;
+    width: min(360px, 92vw);
+    margin: 0 auto;
   }
 }

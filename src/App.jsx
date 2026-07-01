@@ -426,9 +426,30 @@ export default function App({ variant = 'linear' }) {
         ))}
       </div>
 
-      {/* Vertical match feed (radial page only), between groups and bracket */}
+      {/* Left column (radial page only): the control buttons in their own
+          toolbar above the match feed, so they never overlap the circle. */}
       {variant === 'rounded' && (
-        <RoundedFeed liveMatches={liveMatches} upcoming={upcoming} />
+        <div className="rounded-leftcol">
+          {SHOW_CONTROLS && (
+            <div className="rounded-controls">
+              <button
+                type="button"
+                className="best-thirds-btn"
+                onClick={() => setStandingsView('thirds')}
+              >
+                <i className="fa-solid fa-ranking-star bt-icon" aria-hidden="true" />
+                <span className="bt-label">Best 3rds</span>
+              </button>
+              <button type="button" className="reset-btn" onClick={handleResetLive}>
+                Reset to live
+              </button>
+              <button type="button" className="reset-btn ghost" onClick={handleClearAll}>
+                Clear all
+              </button>
+            </div>
+          )}
+          <RoundedFeed liveMatches={liveMatches} upcoming={upcoming} />
+        </div>
       )}
 
       {/* Bracket — radial redesign on /rounded-bracket */}
@@ -459,24 +480,6 @@ export default function App({ variant = 'linear' }) {
                         <i className="fa-solid fa-diagram-project" aria-hidden="true" />
                         Classic View
                       </Link>
-                    ),
-                    topLeft: (
-                      <>
-                        <button
-                          type="button"
-                          className="best-thirds-btn"
-                          onClick={() => setStandingsView('thirds')}
-                        >
-                          <i className="fa-solid fa-ranking-star bt-icon" aria-hidden="true" />
-                          <span className="bt-label">Best 3rds</span>
-                        </button>
-                        <button type="button" className="reset-btn" onClick={handleResetLive}>
-                          Reset to live
-                        </button>
-                        <button type="button" className="reset-btn ghost" onClick={handleClearAll}>
-                          Clear all
-                        </button>
-                      </>
                     ),
                   }
                 : null
