@@ -1,16 +1,16 @@
 @use 'sass:color';
 
 // ---- Theme tokens (palette: pale-slate / platinum / bright-marine / chocolate-plum / tomato-jam) ----
-$bg: #d1ced5; // pale-slate — page background
-$panel: #ededed; // platinum — bracket & cards
-$panel-2: #ffffff; // buttons / secondary panels
-$slot: #ffffff; // filled slot / flag tile
-$slot-empty: #e3e1e6; // empty bracket slot
-$line: #b0abb5; // borders & connector lines
-$border: #cdcad1; // card/panel borders
-$accent: #3270b4; // bright-marine — VS, Predict, champion, highlights
-$text: #503432; // chocolate-plum — primary text
-$muted: #837a78; // secondary text
+$bg: #181917; // page background (matches the radial page)
+$panel: #202220; // bracket & cards
+$panel-2: #2a2c29; // buttons / secondary panels
+$slot: #2a2c29; // filled slot / flag tile
+$slot-empty: #232522; // empty bracket slot
+$line: #3a3c39; // borders & connector lines
+$border: #34362f; // card/panel borders
+$accent: #f7b733; // gold — VS, Predict, champion, highlights
+$text: #f0efec; // primary text
+$muted: #9a938f; // secondary text
 $danger: #bf3337; // tomato-jam — live / eliminated
 
 .app {
@@ -136,7 +136,7 @@ $danger: #bf3337; // tomato-jam — live / eliminated
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  background: #fff;
+  background: $panel-2;
   color: var(--btn-c);
   border: 1px solid rgba($accent, 0.6); // overridden per-variant below
   border-color: color-mix(in srgb, var(--btn-c) 60%, transparent);
@@ -777,7 +777,7 @@ $danger: #bf3337; // tomato-jam — live / eliminated
   &.is-eliminated {
     cursor: not-allowed;
     border-color: rgba($danger, 0.55);
-    background: #f6e0e1;
+    background: rgba($danger, 0.14);
 
     .flag {
       filter: grayscale(1);
@@ -1491,5 +1491,316 @@ a.credit:hover {
     &:hover {
       background: rgba(255, 255, 255, 0.32);
     }
+  }
+}
+
+// ============================================================================
+// Radial / "rounded" bracket — /rounded-bracket
+// Concentric rings of circular team badges collapsing toward the trophy at the
+// core, mirroring the linear bracket's data but in a circular layout.
+// ============================================================================
+.app.rounded-page {
+  background: #181917;
+  min-height: 100vh;
+
+
+  // Dark-theme the group cards to match the page.
+  .group-card {
+    background: #202220;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .group-flag {
+    background: #2a2c29;
+    border-color: rgba(255, 255, 255, 0.1);
+
+    &.is-eliminated {
+      background: rgba(220, 40, 40, 0.14);
+      border-color: rgba($danger, 0.5);
+    }
+  }
+}
+
+.bracket.rounded {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 24px 12px 40px;
+  // Warm glow at the centre, fading to the dark page background.
+  background:
+    radial-gradient(
+      circle at 50% 46%,
+      rgba(247, 183, 51, 0.22) 0%,
+      rgba(247, 183, 51, 0.06) 24%,
+      rgba(0, 0, 0, 0) 52%
+    );
+}
+
+.rounded-stage-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.rounded-stage {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1040px;
+  height: 1040px;
+  transform: translateX(-50%) scale(var(--stage-scale, 1));
+  transform-origin: top center;
+}
+
+.rounded-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  path {
+    stroke: rgba(255, 255, 255, 0.14);
+    stroke-width: 1.5;
+    fill: none;
+    transition: stroke 0.2s;
+
+    // Winning segment — tinted with the advancing team's flag colour (set
+    // inline), thicker and glowing so the champion's path stands out.
+    &.is-won {
+      stroke-width: 3.5;
+      filter: drop-shadow(0 0 4px currentColor);
+    }
+  }
+}
+
+// Eliminated team in a matchup — greyed out.
+.rounded-slot.is-loser {
+  .flag {
+    filter: grayscale(1);
+    opacity: 0.45;
+  }
+  .slot {
+    opacity: 0.85;
+    box-shadow: none;
+  }
+}
+
+// Each badge is absolutely positioned by its centre point.
+.rounded-slot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+
+  .slot {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: none;
+    background: $slot;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+
+    // Undecided matchups: transparent fill with a glowing gold (centre colour)
+    // ring, so they read as "still to be played".
+    &:not(.is-filled) {
+      background: transparent;
+      border: 2px solid rgba(247, 183, 51, 0.7);
+      box-shadow: 0 0 8px rgba(247, 183, 51, 0.35);
+    }
+    &.is-selected {
+      box-shadow: 0 0 0 3px rgba($accent, 0.55);
+    }
+  }
+
+  // Circular flags to match the reference design.
+  .flag {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-shadow: none;
+    background-size: cover;
+    background-position: center;
+  }
+
+  .slot-label {
+    font-size: 9px;
+  }
+
+  // Keep the clear button reachable: show it while hovering anywhere on the
+  // badge wrapper, and tuck it onto the badge edge so there's no dead gap
+  // between the round flag and the button to lose the hover in.
+  .slot-clear {
+    top: -2px;
+    right: -2px;
+    display: none;
+  }
+  &:hover .slot-clear {
+    display: flex;
+  }
+}
+
+// Inner rings get progressively larger badges so the hierarchy reads clearly.
+.rounded-slot.ring-2 .slot { width: 50px; height: 50px; }
+.rounded-slot.ring-3 .slot { width: 56px; height: 56px; }
+.rounded-slot.ring-4 .slot { width: 62px; height: 62px; }
+
+// Core trophy + champion.
+.rounded-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+
+  .rounded-emblem {
+    width: auto;
+    height: 190px;
+    filter: drop-shadow(0 0 30px rgba(247, 183, 51, 0.55));
+  }
+  .rounded-champion-label {
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    color: #f7b733;
+  }
+}
+
+// Champion badge, sitting directly below the trophy at the core.
+.rounded-champion {
+  margin-top: 6px;
+  pointer-events: auto;
+
+  .slot {
+    width: 124px;
+    height: 70px;
+    border-radius: 9px;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+
+    &.is-filled {
+      background: transparent;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+    }
+  }
+  .slot-clear {
+    z-index: 4;
+  }
+  .flag {
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+    box-shadow: none;
+    background-size: cover;
+    background-position: center;
+  }
+}
+
+// Navigation link between the classic and radial views, styled like a button.
+.reset-btn.view-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  background: #f7b733;
+  border: 1px solid #e0a020;
+  color: #17140c;
+  font-weight: 700;
+
+  i {
+    color: #17140c;
+  }
+
+  &:hover {
+    background: #ffc94d;
+    border-color: #f7b733;
+    color: #17140c;
+  }
+}
+
+// Action buttons tucked into the bracket's empty top corners, stacked
+// vertically so they sit "around" the circle.
+.rounded-actions {
+  position: absolute;
+  top: 18px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 132px;
+
+  button {
+    width: 100%;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    transition: transform 0.12s, box-shadow 0.12s;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+    }
+  }
+}
+.rounded-actions-tc {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  align-items: center;
+  z-index: 50;
+}
+.rounded-actions-tl {
+  left: 18px;
+  align-items: flex-start;
+}
+.rounded-actions-tr {
+  right: 18px;
+  align-items: flex-end;
+}
+
+// Credit links — mirror of the zeta logo in the bottom-left corner.
+// left/top set inline (stage coords); centred on the anchor so it scales.
+.rounded-credits-left {
+  position: absolute;
+  transform: translate(-50%, -50%);
+
+  .credit {
+    font-family: 'Bahnschrift', 'Trebuchet MS', 'Segoe UI', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #f7f7f7;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+  .credits {
+    gap: 22px;
+  }
+}
+
+.rounded-zeta {
+  position: absolute;
+  // Positioned inside the stage coordinate system (left/top set inline);
+  // centred on its anchor point so it scales with the circle.
+  transform: translate(-50%, -50%);
+  width: 280px;
+  height: 280px;
+  padding-bottom: 0;
+}
+
+// On narrow screens the stage scales down via JS; widen the warm glow a touch.
+@media (max-width: 720px) {
+  .bracket.rounded {
+    padding: 12px 6px 28px;
   }
 }

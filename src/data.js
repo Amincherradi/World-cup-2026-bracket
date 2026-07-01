@@ -112,6 +112,23 @@ export const GROUPS = [
   },
 ];
 
+// Representative primary flag colour per team — used to tint the winning
+// connector lines in the radial bracket.
+export const TEAM_COLORS = {
+  mex: '#006847', kor: '#003478', cze: '#11457e', rsa: '#007a4d',
+  can: '#ff0000', sui: '#ff0000', bih: '#002395', qat: '#8a1538',
+  bra: '#009b3a', mar: '#c1272d', sco: '#005eb8', hai: '#00209f',
+  usa: '#3c3b6e', aus: '#ffcd00', par: '#d52b1e', tur: '#e30a17',
+  ger: '#dd0000', civ: '#f77f00', ecu: '#ffd100', cuw: '#002b7f',
+  swe: '#006aa7', jpn: '#bc002d', ned: '#f36c21', tun: '#e70013',
+  nzl: '#00247d', irn: '#239f40', bel: '#ef3340', egy: '#ce1126',
+  uru: '#0038a8', ksa: '#006c35', esp: '#c60b1e', cpv: '#003893',
+  nor: '#ef2b2d', fra: '#0055a4', sen: '#00853f', irq: '#ce1126',
+  arg: '#75aadb', aut: '#ed2939', jor: '#ce1126', alg: '#006233',
+  col: '#fcd116', cod: '#007fff', por: '#da291c', uzb: '#0099b5',
+  eng: '#cf081f', gha: '#006b3f', pan: '#da121a', cro: '#ff0000',
+};
+
 // Flat lookup: teamId -> team object
 export const TEAMS_BY_ID = Object.fromEntries(
   GROUPS.flatMap((g) => g.teams.map((t) => [t.id, t]))

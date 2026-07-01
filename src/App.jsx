@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   GROUPS,
   BRACKET,
@@ -15,6 +16,7 @@ import Slot from './components/Slot';
 import LiveMatches from './components/LiveMatches';
 import UpcomingMarquee from './components/UpcomingMarquee';
 import BrandMark from './components/BrandMark';
+import RoundedBracket from './components/RoundedBracket';
 import { OFFICIAL_BRANDING, BRAND } from './brand';
 import emblem from './assets/2026_FIFA_World_Cup_emblem.svg.webp';
 import { Analytics } from '@vercel/analytics/react';
@@ -54,7 +56,7 @@ const params = new URLSearchParams(window.location.search);
 const EMBED = params.get('embed') === '1';
 const SHOW_CONTROLS = params.get('controls') !== '0';
 
-export default function App() {
+export default function App({ variant = 'linear' }) {
   // slotId -> teamId. Seeded with the static snapshot for an instant first
   // paint, then replaced by the live API result once it arrives.
   const [assignments, setAssignments] = useState(getInitialAssignments);
@@ -290,7 +292,8 @@ export default function App() {
     ));
 
   return (
-    <div className={`app${EMBED ? ' embed' : ''}${standingsView ? ' modal-open' : ''}`}>
+    <div className={`app${EMBED ? ' embed' : ''}${standingsView ? ' modal-open' : ''}${variant === 'rounded' ? ' rounded-page' : ''}`}>
+      {variant !== 'rounded' && (
       <header className="topbar">
         <div className="topbar-left">
           <h1 className="wordmark">
@@ -316,6 +319,10 @@ export default function App() {
         </div>
         {SHOW_CONTROLS && (
           <div className="actions">
+            <Link className="reset-btn view-link" to="/">
+              <i className="fa-solid fa-circle-nodes" aria-hidden="true" />
+              Radial View
+            </Link>
             <button type="button" className="reset-btn share" onClick={handleShare}>
               Share
             </button>
@@ -328,8 +335,9 @@ export default function App() {
           </div>
         )}
       </header>
+      )}
 
-      {(liveMatches.length > 0 || upcoming.length > 0) && (
+      {variant !== 'rounded' && (liveMatches.length > 0 || upcoming.length > 0) && (
         <div className="header-feed">
           <LiveMatches matches={liveMatches} />
           <UpcomingMarquee matches={upcoming} />
@@ -354,7 +362,54 @@ export default function App() {
         ))}
       </div>
 
-      {/* Bracket */}
+      {/* Bracket — radial redesign on /rounded-bracket */}
+      {variant === 'rounded' ? (
+        <main className="bracket rounded">
+          <RoundedBracket
+            assignments={assignments}
+            slotProps={slotProps}
+            embed={EMBED}
+            credits={<Credits />}
+            actions={
+              SHOW_CONTROLS
+                ? {
+                    topCenter: (
+                      <Link className="reset-btn view-link" to="/bracket">
+                        <i className="fa-solid fa-diagram-project" aria-hidden="true" />
+                        Classic View
+                      </Link>
+                    ),
+                    topLeft: (
+                      <>
+                        <button
+                          type="button"
+                          className="best-thirds-btn"
+                          onClick={() => setStandingsView('thirds')}
+                        >
+                          <i className="fa-solid fa-ranking-star bt-icon" aria-hidden="true" />
+                          <span className="bt-label">Best 3rds</span>
+                        </button>
+                        <button type="button" className="reset-btn" onClick={handleResetLive}>
+                          Reset to live
+                        </button>
+                      </>
+                    ),
+                    topRight: (
+                      <>
+                        <button type="button" className="reset-btn share" onClick={handleShare}>
+                          Share
+                        </button>
+                        <button type="button" className="reset-btn ghost" onClick={handleClearAll}>
+                          Clear all
+                        </button>
+                      </>
+                    ),
+                  }
+                : null
+            }
+          />
+        </main>
+      ) : (
       <main className="bracket" ref={bracketRef}>
        <div className="bracket-inner">
         {/* Round-name headers, aligned to the columns below */}
@@ -422,6 +477,7 @@ export default function App() {
         </div>
        </div>
       </main>
+      )}
 
       {/* Right groups G–L */}
       <div className="groups groups-side">
