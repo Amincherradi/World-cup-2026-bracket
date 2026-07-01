@@ -1986,14 +1986,245 @@ a.credit:hover {
   }
 }
 
-.rounded-zeta {
+
+// All-time top-scorers leaderboard, anchored in the empty space right of the
+// circle. Positioned in stage coords (inline left/top) so it scales with the
+// bracket; centred on its anchor point like the zeta logo.
+.rounded-scorers {
   position: absolute;
-  // Positioned inside the stage coordinate system (left/top set inline);
-  // centred on its anchor point so it scales with the circle.
   transform: translate(-50%, -50%);
-  width: 280px;
-  height: 280px;
-  padding-bottom: 0;
+  width: 330px;
+}
+
+// ZETA logo sitting above the social bar / scorers card in the right column.
+.ts-logo {
+  display: block;
+  width: 118%;
+  margin-left: -9%; // let the logo run a touch wider than the card
+  height: 86px;
+  margin-bottom: 6px;
+  background: url('./assets/zeta.png') no-repeat center / contain;
+  user-select: none;
+}
+
+// Social bar attached to the top of the scorers card: LinkedIn (blue) | GitHub
+// (dark), split by an inclined divider. Top corners rounded 5px, flat bottom so
+// it sits flush against the card.
+.ts-social {
+  display: flex;
+  height: 36px;
+  border-radius: 5px 5px 0 0;
+  overflow: hidden;
+  box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.4);
+}
+.ts-soc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-decoration: none;
+  transition: filter 0.15s;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+  }
+  &:hover { filter: brightness(1.15); }
+}
+// Left half — LinkedIn blue, with a slanted right edge overlapping the GitHub
+// half so the divider reads as a clean incline.
+.ts-soc-in {
+  flex: 1 1 52%;
+  background: #0a66c2;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 0 100%);
+  margin-right: -18px;
+  padding-right: 6px;
+  position: relative;
+  z-index: 1;
+}
+// Right half — GitHub dark.
+.ts-soc-gh {
+  flex: 1 1 48%;
+  background: #171515;
+  padding-left: 10px;
+}
+
+.top-scorers {
+  position: relative;
+  background: linear-gradient(180deg, rgba(18, 16, 10, 0.92), rgba(10, 9, 6, 0.92));
+  border: 1px solid rgba(247, 183, 51, 0.45);
+  border-radius: 0 0 16px 16px;
+  padding: 16px 18px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 30px rgba(247, 183, 51, 0.06);
+  backdrop-filter: blur(4px);
+  color: #f4efe4;
+
+  // "Moya" maker's mark, pinned to the card's top-right corner.
+  .ts-badge {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ffe08a, #f7b733 55%, #c8891a);
+    color: #241a06;
+    font-family: 'Bahnschrift', 'Trebuchet MS', 'Segoe UI', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 231, 160, 0.7);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+
+  // Stack the live section above the all-time section with a divider between.
+  .ts-section + .ts-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(247, 183, 51, 0.22);
+  }
+
+  .ts-head {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(247, 183, 51, 0.25);
+  }
+
+  .ts-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    color: #f7b733;
+
+    // The live 2026 golden-boot race gets a red real-time indicator.
+    &.is-realtime {
+      color: #ff5a5f;
+      .ts-dot { background: #ff5a5f; box-shadow: 0 0 0 0 rgba(255, 90, 95, 0.6); }
+    }
+  }
+  .ts-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f7b733;
+    box-shadow: 0 0 0 0 rgba(247, 183, 51, 0.6);
+    animation: ts-pulse 1.6s ease-out infinite;
+  }
+  .is-realtime .ts-dot { animation: ts-pulse-red 1.6s ease-out infinite; }
+
+  .ts-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 2px 0 0;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    color: #fff;
+
+    i { color: #f7b733; font-size: 16px; }
+  }
+  .ts-sub {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: rgba(244, 239, 228, 0.6);
+    text-transform: uppercase;
+  }
+
+  .ts-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .ts-row {
+    display: grid;
+    grid-template-columns: 20px 26px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 6px;
+    border-radius: 9px;
+    transition: background 0.15s;
+
+    &:hover { background: rgba(247, 183, 51, 0.08); }
+
+    &.is-leader {
+      background: rgba(247, 183, 51, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(247, 183, 51, 0.35);
+    }
+  }
+
+  .ts-rank {
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+    color: rgba(244, 239, 228, 0.55);
+
+    .is-leader & { color: #f7b733; }
+  }
+
+  .ts-flag .fi {
+    width: 26px;
+    height: 19px;
+    border-radius: 3px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  }
+
+  .ts-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .ts-name {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ts-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #f7b733, #ffd778);
+    width: var(--pct, 0%);
+    box-shadow: 0 0 6px rgba(247, 183, 51, 0.5);
+  }
+
+  .ts-goals {
+    font-size: 20px;
+    font-weight: 900;
+    color: #f7b733;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@keyframes ts-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(247, 183, 51, 0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(247, 183, 51, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(247, 183, 51, 0); }
+}
+
+@keyframes ts-pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(255, 90, 95, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(255, 90, 95, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 90, 95, 0); }
 }
 
 // On narrow screens the stage scales down via JS; widen the warm glow a touch.

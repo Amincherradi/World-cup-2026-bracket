@@ -393,6 +393,36 @@ export async function fetchUpcomingMatches(assignments = {}) {
   }
 }
 
+// ----- Live top scorers (current World Cup edition) -----
+// Fetches the current tournament's golden-boot race via the /api/scorers proxy.
+// The national team name resolves to our internal id so we can show the flag.
+// Returns [{ name, country, code, goals }] sorted by goals, or [] if
+// unavailable (no token, tournament not started, fetch error).
+export async function fetchTopScorers() {
+  try {
+    const res = await fetch('/api/scorers');
+    if (!res.ok) throw new Error(`proxy ${res.status}`);
+    const json = await res.json();
+    if (json?.error) throw new Error(json.error);
+    const scorers = Array.isArray(json.scorers) ? json.scorers : [];
+    return scorers
+      .map((s) => {
+        const id = resolveId(s.team?.name);
+        return {
+          name: s.player?.name ?? 'Unknown',
+          country: TEAMS_BY_ID[id]?.name ?? s.team?.name ?? '',
+          code: TEAMS_BY_ID[id]?.code ?? null,
+          goals: s.goals ?? s.numberOfGoals ?? 0,
+        };
+      })
+      .filter((s) => s.goals > 0)
+      .sort((a, b) => b.goals - a.goals);
+  } catch (err) {
+    console.warn('[liveData] top scorers unavailable:', err.message);
+    return [];
+  }
+}
+
 // ----- Standings & qualification logic -----
 
 // Points/GD/GF table for a set of played results within one group. Also tracks

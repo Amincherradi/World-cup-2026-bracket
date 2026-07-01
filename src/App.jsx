@@ -8,7 +8,7 @@ import {
   LIVE_ELIMINATED,
   SLOT_CHILDREN,
 } from './data';
-import { fetchLive, fetchLiveMatches, fetchUpcomingMatches, POLL_MS, LIVE_POLL_MS } from './liveData';
+import { fetchLive, fetchLiveMatches, fetchUpcomingMatches, fetchTopScorers, POLL_MS, LIVE_POLL_MS } from './liveData';
 // fetchUpcomingMatches is now driven by the live-snapshot poll (it needs the
 // resolved bracket assignments), not the fast in-play poll.
 import GroupCard from './components/GroupCard';
@@ -87,6 +87,9 @@ export default function App({ variant = 'linear' }) {
   // Upcoming fixtures, scrolled in a marquee next to the live cards.
   const [upcoming, setUpcoming] = useState([]);
 
+  // Live top scorers of the current tournament (golden-boot race).
+  const [liveScorers, setLiveScorers] = useState([]);
+
   // Brief hint when Share is tapped with no champion picked yet.
   const [shareHint, setShareHint] = useState(false);
 
@@ -145,6 +148,21 @@ export default function App({ variant = 'linear' }) {
       fetchUpcomingMatches(snap.assignments).then((next) => {
         if (!cancelled) setUpcoming(next);
       });
+    };
+    refresh();
+    const timer = setInterval(refresh, POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  // Poll the current tournament's top scorers (changes slowly, so gentle).
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      const scorers = await fetchTopScorers();
+      if (!cancelled) setLiveScorers(scorers);
     };
     refresh();
     const timer = setInterval(refresh, POLL_MS);
@@ -420,6 +438,7 @@ export default function App({ variant = 'linear' }) {
             slotProps={slotProps}
             embed={EMBED}
             credits={<Credits />}
+            topScorers={liveScorers}
             centerShare={
               SHOW_CONTROLS && bracketComplete ? (
                 <button
@@ -453,12 +472,10 @@ export default function App({ variant = 'linear' }) {
                         <button type="button" className="reset-btn" onClick={handleResetLive}>
                           Reset to live
                         </button>
+                        <button type="button" className="reset-btn ghost" onClick={handleClearAll}>
+                          Clear all
+                        </button>
                       </>
-                    ),
-                    topRight: (
-                      <button type="button" className="reset-btn ghost" onClick={handleClearAll}>
-                        Clear all
-                      </button>
                     ),
                   }
                 : null

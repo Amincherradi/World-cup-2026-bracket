@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { BRACKET, TEAM_COLORS } from '../data';
 import Slot from './Slot';
+import TopScorers from './TopScorers';
 import trophy from '../assets/World-Cup-Trophy-PNG-Picture.png';
 
 // --- Radial bracket geometry ----------------------------------------------
@@ -47,7 +48,7 @@ function pointFor(ringIdx, i, count) {
   };
 }
 
-export default function RoundedBracket({ assignments, slotProps, embed, credits, actions, centerShare }) {
+export default function RoundedBracket({ assignments, slotProps, embed, credits, actions, centerShare, topScorers }) {
   // Scale the fixed-size stage down to fit the available width.
   const wrapRef = useRef(null);
   const stageRef = useRef(null);
@@ -231,23 +232,13 @@ export default function RoundedBracket({ assignments, slotProps, embed, credits,
           })
         )}
 
-        {/* Zeta logo, centred in the empty bottom-right corner of the square. */}
+        {/* All-time top-scorers leaderboard, in the empty band right of the circle. */}
         {!embed && (
           <div
-            className="rounded-zeta zeta-box"
-            role="img"
-            aria-label="Zeta"
-            style={{ left: `${STAGE * 1.08}px`, top: `${STAGE * 0.84}px` }}
-          />
-        )}
-
-        {/* Credit links, mirrored to the bottom-left corner. */}
-        {!embed && credits && (
-          <div
-            className="rounded-credits rounded-credits-left"
-            style={{ left: `${STAGE * 1.08}px`, top: `${STAGE * 0.92}px` }}
+            className="rounded-scorers"
+            style={{ left: `${STAGE * 1.2}px`, top: `${STAGE * 0.44}px` }}
           >
-            {credits}
+            <TopScorers live={topScorers} />
           </div>
         )}
       </div>
