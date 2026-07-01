@@ -168,6 +168,12 @@ export async function fetchLiveMatches() {
       const fixtures = Array.isArray(json?.response) ? json.response : [];
       return fixtures
         .filter((f) => LIVE_STATUSES.includes(f.fixture?.status?.short))
+        // Guard against a provider flagging a match live before kickoff: only
+        // treat it as in-play once its scheduled start has actually passed.
+        .filter((f) => {
+          const ko = f.fixture?.date;
+          return !ko || new Date(ko).getTime() <= Date.now();
+        })
         .map((f) => {
           const homeId = resolveId(f.teams?.home?.name);
           const awayId = resolveId(f.teams?.away?.name);
@@ -264,7 +270,9 @@ function liveFromFootballData(matches) {
     .filter((m) => FD_LIVE_STATUSES.includes(m.status))
     .filter((m) => {
       if (!m.utcDate) return true;
-      return Date.now() - new Date(m.utcDate).getTime() < MAX_LIVE_MS;
+      const age = Date.now() - new Date(m.utcDate).getTime();
+      // Started (kickoff passed) and not older than the max realistic duration.
+      return age >= 0 && age < MAX_LIVE_MS;
     })
     .map((m) => {
       const homeId = resolveId(m.homeTeam?.name);
