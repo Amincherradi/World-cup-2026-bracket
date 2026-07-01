@@ -47,7 +47,7 @@ function pointFor(ringIdx, i, count) {
   };
 }
 
-export default function RoundedBracket({ assignments, slotProps, embed, credits, actions }) {
+export default function RoundedBracket({ assignments, slotProps, embed, credits, actions, centerShare }) {
   // Scale the fixed-size stage down to fit the available width.
   const wrapRef = useRef(null);
   const stageRef = useRef(null);
@@ -195,6 +195,7 @@ export default function RoundedBracket({ assignments, slotProps, embed, credits,
 
         {/* Trophy + champion badge at the core */}
         <div className="rounded-core" style={{ left: `${C}px`, top: `${C}px` }}>
+          {centerShare && <div className="rounded-share">{centerShare}</div>}
           <img className="rounded-emblem" src={trophy} alt="World Cup Trophy" />
           <div className="rounded-champion">
             <Slot

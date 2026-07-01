@@ -51,6 +51,15 @@ function Credits() {
 // Round names per column, outermost -> innermost (matches BRACKET.left order).
 const ROUND_NAMES = ['ROUND OF 32', 'ROUND OF 16', 'QUARTER-FINALS', 'SEMI-FINALS'];
 
+// Every slot in the bracket — used to tell when the user has placed all teams
+// (so the Share button can reveal itself only on a fully-filled bracket).
+const ALL_SLOT_IDS = [
+  ...BRACKET.left.flat().map((s) => s.id),
+  ...BRACKET.right.flat().map((s) => s.id),
+  ...BRACKET.final.map((s) => s.id),
+  BRACKET.champion.id,
+];
+
 // Embed/widget mode for iframing into a partner's site: `?embed=1` strips the
 // page chrome (predict callout, credits) for a clean drop-in. `&controls=0`
 // additionally hides the action buttons for a read-only live bracket.
@@ -163,6 +172,9 @@ export default function App({ variant = 'linear' }) {
   }, []);
 
   const usedTeamIds = new Set(Object.values(assignments));
+
+  // True once every slot in the bracket is filled — gates the Share button.
+  const bracketComplete = ALL_SLOT_IDS.every((id) => assignments[id]);
 
   // teamId -> { score, minute } for teams currently playing, so group cards can
   // flag the live team and show its running score.
@@ -359,9 +371,6 @@ export default function App({ variant = 'linear' }) {
               <i className="fa-solid fa-circle-nodes" aria-hidden="true" />
               Radial View
             </Link>
-            <button type="button" className="reset-btn share" onClick={handleShare}>
-              Share
-            </button>
             <button type="button" className="reset-btn" onClick={handleResetLive}>
               Reset to live
             </button>
@@ -411,6 +420,17 @@ export default function App({ variant = 'linear' }) {
             slotProps={slotProps}
             embed={EMBED}
             credits={<Credits />}
+            centerShare={
+              SHOW_CONTROLS && bracketComplete ? (
+                <button
+                  type="button"
+                  className="reset-btn share center-share"
+                  onClick={handleShare}
+                >
+                  Share
+                </button>
+              ) : null
+            }
             actions={
               SHOW_CONTROLS
                 ? {
@@ -436,14 +456,9 @@ export default function App({ variant = 'linear' }) {
                       </>
                     ),
                     topRight: (
-                      <>
-                        <button type="button" className="reset-btn share" onClick={handleShare}>
-                          Share
-                        </button>
-                        <button type="button" className="reset-btn ghost" onClick={handleClearAll}>
-                          Clear all
-                        </button>
-                      </>
+                      <button type="button" className="reset-btn ghost" onClick={handleClearAll}>
+                        Clear all
+                      </button>
                     ),
                   }
                 : null
@@ -469,6 +484,15 @@ export default function App({ variant = 'linear' }) {
 
           <div className="center">
             <div className="emblem-wrap">
+              {SHOW_CONTROLS && bracketComplete && (
+                <button
+                  type="button"
+                  className="reset-btn share center-share"
+                  onClick={handleShare}
+                >
+                  Share
+                </button>
+              )}
               {OFFICIAL_BRANDING ? (
                 <img className="emblem" src={emblem} alt={BRAND.markAlt} />
               ) : (

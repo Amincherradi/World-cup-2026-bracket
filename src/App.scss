@@ -1206,6 +1206,20 @@ $danger: #bf3337; // tomato-jam — live / eliminated
   user-select: none;
 }
 
+// Share button sits directly above the World Cup emblem, revealed only once the
+// whole bracket is filled.
+.center-share {
+  width: 132px;
+  height: 30px;
+  margin-bottom: 4px;
+  animation: center-share-in 0.35s ease both;
+}
+
+@keyframes center-share-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 // BracketLive bracket-glyph logo (neutral, no FIFA IP): marine lines, tomato
 // "champion" node echoing the LIVE colour.
 .brand-mark {
@@ -1826,6 +1840,19 @@ a.credit:hover {
   flex-direction: column;
   align-items: center;
   pointer-events: none;
+
+  // Share button revealed above the trophy once the whole bracket is filled.
+  .rounded-share {
+    pointer-events: auto;
+    margin-bottom: 12px;
+    animation: center-share-in 0.35s ease both;
+
+    .center-share {
+      width: 140px;
+      height: 34px;
+      font-size: 14px;
+    }
+  }
 
   .rounded-emblem {
     width: auto;
