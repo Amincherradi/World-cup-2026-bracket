@@ -6,15 +6,15 @@ import Flag from './Flag';
 // top when data is available.
 const ALL_TIME_SCORERS = [
   { name: 'Lionel Messi', country: 'Argentina', code: 'ar', goals: 19 },
-  { name: 'Kylian Mbappé', country: 'France', code: 'fr', goals: 16 },
+  { name: 'Kylian Mbappé', country: 'France', code: 'fr', goals: 18 },
   { name: 'Miroslav Klose', country: 'Germany', code: 'de', goals: 16 },
   { name: 'Ronaldo', country: 'Brazil', code: 'br', goals: 15 },
   { name: 'Gerd Müller', country: 'West Germany', code: 'de', goals: 14 },
   { name: 'Just Fontaine', country: 'France', code: 'fr', goals: 13 },
   { name: 'Pelé', country: 'Brazil', code: 'br', goals: 12 },
-  { name: 'Sándor Kocsis', country: 'Hungary', code: 'hu', goals: 11 },
+  { name: 'Harry Kane', country: 'England', code: 'gb-eng', goals: 11 },
   { name: 'Jürgen Klinsmann', country: 'Germany', code: 'de', goals: 11 },
-  { name: 'Gary Lineker', country: 'England', code: 'gb-eng', goals: 10 },
+  { name: 'Sándor Kocsis', country: 'Hungary', code: 'hu', goals: 11 },
 ];
 
 // One leaderboard section: a list of { name, country, code, goals } rows with a
