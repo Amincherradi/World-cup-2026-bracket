@@ -1566,7 +1566,7 @@ a.credit:hover {
 .rounded-stage-wrap {
   position: relative;
   width: 100%;
-  max-width: 1040px;
+  max-width: 1500px; // room for the circle + the reserved scorers card
   margin: 0 auto;
 }
 
@@ -1574,9 +1574,10 @@ a.credit:hover {
 // styled panels stacked top-to-bottom instead of the horizontal marquee.
 // Invisible column on the right, same footprint as the left feed, so the circle
 // stays centered on the page.
+// Legacy right-side balancer — no longer needed now the scorers card occupies
+// the right of the circle column. Hidden so it can't create a dead gap.
 .rounded-feed-spacer {
-  width: 184px;
-  flex-shrink: 0;
+  display: none;
 }
 
 // Left column of the radial page: control toolbar stacked above the match feed,
@@ -2010,12 +2011,14 @@ a.credit:hover {
 // All-time top-scorers leaderboard, anchored in the empty space right of the
 // circle. Positioned in stage coords (inline left/top) so it scales with the
 // bracket; centred on its anchor point like the zeta logo.
-// Top-scorers card — anchored in the band right of the circle, in stage coords
-// so it scales with the circle. Centred on its anchor point (translate -50%).
+// Top-scorers card — pinned to the right of the stage wrap, unscaled and
+// vertically centred. The circle's scale is computed to reserve this width (see
+// SCORERS_W in RoundedBracket.jsx), so the two never touch.
 .rounded-scorers {
   position: absolute;
-  transform: translate(-50%, -50%);
-  width: 300px;
+  right: 0;
+  top: 8px;
+  width: 280px;
 }
 
 // ZETA logo sitting above the social bar / scorers card in the right column.
@@ -2023,8 +2026,8 @@ a.credit:hover {
   display: block;
   width: 118%;
   margin-left: -9%; // let the logo run a touch wider than the card
-  height: 86px;
-  margin-bottom: 6px;
+  height: 52px;
+  margin-bottom: 4px;
   background: url('./assets/zeta.png') no-repeat center / contain;
   user-select: none;
 }
@@ -2172,7 +2175,7 @@ a.credit:hover {
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 3px;
   }
 
   .ts-row {
@@ -2180,7 +2183,7 @@ a.credit:hover {
     grid-template-columns: 20px 26px 1fr auto;
     align-items: center;
     gap: 10px;
-    padding: 5px 6px;
+    padding: 3px 6px;
     border-radius: 9px;
     transition: background 0.15s;
 

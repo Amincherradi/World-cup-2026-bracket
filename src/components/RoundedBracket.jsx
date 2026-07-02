@@ -43,6 +43,11 @@ const RINGS = buildRings();
 // and laid out in normal document flow so they never hang off-screen.
 const MOBILE_Q = '(max-width: 1024px)';
 
+// Desktop footprint reserved to the right of the circle for the top-scorers
+// card (keep in sync with .rounded-scorers width + the gap in App.scss).
+const SCORERS_W = 280;
+const SCORERS_GAP = 24;
+
 // True when the viewport is narrow enough to use the stacked mobile layout.
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(
@@ -78,14 +83,16 @@ export default function RoundedBracket({ assignments, slotProps, embed, credits,
     const stage = stageRef.current;
     if (!wrap || !stage) return;
     const update = () => {
-      const availW = wrap.clientWidth;
-      // On desktop, fit to whichever is tighter (width or the viewport height
-      // left below the bracket) so the whole circle shows without scrolling.
-      // On mobile the page scrolls vertically, so size purely by width — the
-      // leftover height is tiny once the groups stack above, and clamping by it
-      // used to shrink the circle to nothing.
+      const mobile = window.matchMedia(MOBILE_Q).matches;
+      // On desktop, reserve room on the right for the (unscaled) top-scorers
+      // card so the circle is sized and centred in the space LEFT of it — that
+      // guarantees a gap and the card can never touch the circle. On mobile /
+      // embed the card isn't beside the circle, so nothing is reserved.
+      const reserve = !mobile && !embed ? SCORERS_W + SCORERS_GAP : 0;
+      const availW = Math.max(0, wrap.clientWidth - reserve);
       let scale;
-      if (window.matchMedia(MOBILE_Q).matches) {
+      if (mobile) {
+        // Page scrolls vertically on mobile, so size purely by width.
         scale = Math.min(1, availW / STAGE);
       } else {
         const top = wrap.getBoundingClientRect().top;
@@ -93,6 +100,9 @@ export default function RoundedBracket({ assignments, slotProps, embed, credits,
         scale = Math.min(1, availW / STAGE, availH / STAGE);
       }
       stage.style.setProperty('--stage-scale', String(scale));
+      // Centre the circle within the reserved-left area (translateX(-50%) in CSS
+      // keeps it centred on this point).
+      stage.style.left = `${availW / 2}px`;
       // Reserve the scaled height so the page doesn't leave a huge gap.
       wrap.style.height = `${STAGE * scale}px`;
     };
@@ -104,7 +114,7 @@ export default function RoundedBracket({ assignments, slotProps, embed, credits,
       ro.disconnect();
       window.removeEventListener('resize', update);
     };
-  }, []);
+  }, [isMobile, embed]);
 
   // Pre-compute every slot's point so we can draw connectors and place slots.
   const points = RINGS.map((ring, r) => ring.map((_, i) => pointFor(r, i, ring.length)));
@@ -270,19 +280,18 @@ export default function RoundedBracket({ assignments, slotProps, embed, credits,
           })
         )}
 
-        {/* Desktop: top-scorers card in the band to the right of the circle,
-            positioned in stage coords so it scales with the circle. */}
-        {!embed && !isMobile && (
-          <div
-            className="rounded-scorers"
-            style={{ left: `${STAGE * 1.12}px`, top: `${STAGE * 0.5}px` }}
-          >
-            <TopScorers live={topScorers} />
-          </div>
-        )}
       </div>
+      {/* Desktop: top-scorers card pinned to the right of the stage wrap. The
+          circle's scale reserves this width, so they never touch. Sits inside
+          the wrap (outside the scaled stage) so `right: 0` is measured against
+          the wrap, not the page, and the card itself isn't scaled. */}
+      {!embed && !isMobile && (
+        <div className="rounded-scorers">
+          <TopScorers live={topScorers} />
+        </div>
+      )}
     </div>
-    {/* Mobile: top-scorers card flows below the circle at full width. */}
+    {/* Mobile: top-scorers card stacks below the circle at full width. */}
     {!embed && isMobile && (
       <div className="rounded-scorers rounded-scorers-mobile">
         <TopScorers live={topScorers} />
